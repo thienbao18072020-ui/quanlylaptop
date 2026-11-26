@@ -9,18 +9,41 @@
     <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <!-- Google Fonts: Inter -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
         body {
             font-family: 'Inter', sans-serif;
-            background-color: #f8fafc;
+            background: radial-gradient(circle at top right, #eff6ff 0%, #f8fafc 45%, #f1f5f9 100%);
             color: #0f172a;
         }
         /* Custom scrollbar */
         ::-webkit-scrollbar { width: 6px; height: 6px; }
-        ::-webkit-scrollbar-track { background: #f1f5f9; }
-        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 9999px; }
         ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+        /* Smooth card hover & subtle animations */
+        .glass-header {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+        }
+        .card-elevated {
+            background: #ffffff;
+            border: 1px solid rgba(226, 232, 240, 0.9);
+            box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.04), 0 2px 6px -1px rgba(15, 23, 42, 0.02);
+            transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+        }
+        .card-elevated:hover {
+            box-shadow: 0 12px 28px -4px rgba(15, 23, 42, 0.08), 0 4px 10px -2px rgba(15, 23, 42, 0.03);
+        }
+        @keyframes fadeSlideUp {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-page {
+            animation: fadeSlideUp 0.25s ease-out;
+        }
 
         /* Print styles */
         @media print {
@@ -32,78 +55,88 @@
 <body class="antialiased selection:bg-blue-100 selection:text-blue-900">
 
     <!-- Toast Notification Container -->
-    <div id="toast-container" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
+    <div id="toast-container" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2.5 pointer-events-none"></div>
 
     <!-- Mobile Sidebar Overlay -->
-    <div id="sidebar-overlay" onclick="toggleSidebar()" class="fixed inset-0 bg-slate-900/50 z-30 hidden lg:hidden backdrop-blur-sm transition-opacity"></div>
+    <div id="sidebar-overlay" onclick="toggleSidebar()" class="fixed inset-0 bg-slate-900/50 z-30 hidden lg:hidden backdrop-blur-xs transition-opacity"></div>
 
     <div class="flex h-screen overflow-hidden">
         <!-- SIDEBAR -->
-        <aside id="sidebar" class="fixed inset-y-0 left-0 z-40 w-64 bg-white border-r border-slate-200 flex flex-col transform -translate-x-full lg:translate-x-0 lg:static transition-transform duration-200 ease-in-out">
+        <aside id="sidebar" class="fixed inset-y-0 left-0 z-40 w-68 bg-slate-900 text-slate-300 flex flex-col transform -translate-x-full lg:translate-x-0 lg:static transition-transform duration-200 ease-in-out shadow-2xl lg:shadow-none">
             <!-- Brand Logo -->
-            <div class="h-16 flex items-center gap-3 px-6 border-b border-slate-200 shrink-0">
-                <div class="w-9 h-9 rounded-xl bg-blue-600 text-white flex items-center justify-center font-bold text-lg shadow-sm">
+            <div class="h-18 flex items-center gap-3.5 px-6 border-b border-slate-800/90 shrink-0">
+                <div class="w-10 h-10 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 text-white flex items-center justify-center font-extrabold text-base shadow-lg shadow-blue-500/30 ring-1 ring-white/20">
                     IT
                 </div>
                 <div>
-                    <div class="font-bold text-slate-900 leading-tight text-sm">HỆ THỐNG IT</div>
-                    <div class="text-[11px] text-slate-500 font-medium">Quản lý Tài sản 3 Miền</div>
+                    <div class="font-extrabold text-white tracking-wide text-sm">HỆ THỐNG IT</div>
+                    <div class="text-[11px] text-slate-400 font-medium flex items-center gap-1.5 mt-0.5">
+                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                        Quản lý Tài sản 3 Miền
+                    </div>
                 </div>
             </div>
 
             <!-- Navigation Menu -->
-            <nav id="sidebar-nav" class="flex-1 overflow-y-auto p-3 space-y-1 text-sm font-medium">
-                <button onclick="navigate('dashboard')" data-page="dashboard" class="nav-item w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl transition-colors text-left">
+            <div class="px-6 pt-5 pb-2 text-[10px] font-bold uppercase tracking-widest text-slate-500">
+                Danh mục quản lý
+            </div>
+            <nav id="sidebar-nav" class="flex-1 overflow-y-auto px-3.5 space-y-1.5 text-xs font-semibold">
+                <button onclick="navigate('dashboard')" data-page="dashboard" class="nav-item w-full flex items-center gap-3 px-3.5 py-3 rounded-xl transition-all text-left">
                     <span class="text-base">🏠</span> <span>TRANG CHỦ</span>
                 </button>
-                <button onclick="navigate('computers')" data-page="computers" class="nav-item w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl transition-colors text-left">
+                <button onclick="navigate('computers')" data-page="computers" class="nav-item w-full flex items-center gap-3 px-3.5 py-3 rounded-xl transition-all text-left">
                     <span class="text-base">💻</span> <span>QUẢN LÝ MÁY TÍNH</span>
                 </button>
-                <button onclick="navigate('repairs')" data-page="repairs" class="nav-item w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl transition-colors text-left">
+                <button onclick="navigate('repairs')" data-page="repairs" class="nav-item w-full flex items-center gap-3 px-3.5 py-3 rounded-xl transition-all text-left">
                     <span class="text-base">🔧</span> <span>MÁY ĐANG SỬA</span>
                 </button>
-                <button onclick="navigate('regions')" data-page="regions" class="nav-item w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl transition-colors text-left">
+                <button onclick="navigate('regions')" data-page="regions" class="nav-item w-full flex items-center gap-3 px-3.5 py-3 rounded-xl transition-all text-left">
                     <span class="text-base">🏢</span> <span>QUẢN LÝ 3 MIỀN</span>
                 </button>
-                <button onclick="navigate('employees')" data-page="employees" class="nav-item w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl transition-colors text-left">
+                <button onclick="navigate('employees')" data-page="employees" class="nav-item w-full flex items-center gap-3 px-3.5 py-3 rounded-xl transition-all text-left">
                     <span class="text-base">👥</span> <span>THÀNH VIÊN</span>
                 </button>
-                <button onclick="navigate('reports')" data-page="reports" class="nav-item w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl transition-colors text-left">
+                <button onclick="navigate('reports')" data-page="reports" class="nav-item w-full flex items-center gap-3 px-3.5 py-3 rounded-xl transition-all text-left">
                     <span class="text-base">📊</span> <span>BÁO CÁO</span>
                 </button>
-                <button onclick="navigate('settings')" data-page="settings" class="nav-item w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl transition-colors text-left">
+                <button onclick="navigate('settings')" data-page="settings" class="nav-item w-full flex items-center gap-3 px-3.5 py-3 rounded-xl transition-all text-left">
                     <span class="text-base">⚙️</span> <span>CÀI ĐẶT</span>
                 </button>
             </nav>
 
             <!-- Footer Info -->
-            <div class="p-4 border-t border-slate-100 text-xs text-slate-400">
-                Phiên bản 2.6 • Đồng bộ 3 miền
+            <div class="p-4 m-3 rounded-2xl bg-slate-800/60 border border-slate-700/60 text-[11px] text-slate-400 space-y-1">
+                <div class="font-semibold text-slate-200">Đồng bộ Bắc • Trung • Nam</div>
+                <div class="text-[10px] text-slate-400">Phiên bản 3.0 • Giao diện Nâng cao</div>
             </div>
         </aside>
 
         <!-- MAIN WORKSPACE -->
         <div class="flex-1 flex flex-col min-w-0 overflow-hidden">
             <!-- TOP HEADER -->
-            <header class="h-16 bg-white border-b border-slate-200 px-4 lg:px-8 flex items-center justify-between shrink-0">
+            <header class="h-18 glass-header border-b border-slate-200/80 px-4 sm:px-6 lg:px-8 flex items-center justify-between shrink-0 sticky top-0 z-20">
                 <div class="flex items-center gap-3">
-                    <button onclick="toggleSidebar()" class="lg:hidden p-2 rounded-xl hover:bg-slate-100 text-slate-600">
+                    <button onclick="toggleSidebar()" class="lg:hidden p-2.5 rounded-xl bg-slate-100 hover:bg-slate-200/70 text-slate-700 transition-colors">
                         ☰
                     </button>
-                    <h1 class="text-sm sm:text-base lg:text-lg font-bold text-slate-800 tracking-tight truncate">
-                        HỆ THỐNG QUẢN LÝ MÁY TÍNH 3 MIỀN
-                    </h1>
+                    <div>
+                        <h1 class="text-sm sm:text-base lg:text-lg font-extrabold text-slate-800 tracking-tight truncate">
+                            HỆ THỐNG QUẢN LÝ MÁY TÍNH 3 MIỀN
+                        </h1>
+                        <p class="hidden md:block text-[11px] text-slate-500 font-medium">Trung tâm điều phối thiết bị & bảo trì kỹ thuật toàn quốc</p>
+                    </div>
                 </div>
 
-                <div class="flex items-center gap-3 sm:gap-4">
+                <div class="flex items-center gap-3 sm:gap-3.5">
                     <div class="text-right hidden sm:block">
-                        <div id="header-user-name" class="text-xs font-bold text-slate-800">Bắc IT</div>
-                        <div id="header-user-role" class="text-[11px] text-slate-500">Quản trị viên Hạ tầng</div>
+                        <div id="header-user-name" class="text-xs font-bold text-slate-800">Khách (Chưa đăng nhập)</div>
+                        <div id="header-user-role" class="text-[11px] text-slate-500 font-medium">Chỉ xem số liệu</div>
                     </div>
-                    <div id="header-user-avatar" class="w-9 h-9 rounded-full bg-blue-100 text-blue-700 font-bold text-xs flex items-center justify-center">
-                        IT
+                    <div id="header-user-avatar" class="w-10 h-10 rounded-full bg-slate-100 text-slate-600 font-extrabold text-xs flex items-center justify-center ring-2 ring-white shadow-xs">
+                        ?
                     </div>
-                    <button onclick="openAuthModal('register')" class="px-3 py-1.5 text-xs font-semibold text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-xl transition-colors">
+                    <button id="header-auth-btn" onclick="openAuthModal('login')" class="px-3.5 py-2 text-xs font-bold text-white bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 rounded-xl shadow-xs shadow-blue-500/20 transition-all">
                         Đăng ký / Đăng nhập
                     </button>
                 </div>
@@ -115,11 +148,11 @@
     </div>
 
     <!-- MODAL OVERLAY -->
-    <div id="modal-backdrop" onclick="if(event.target===this) closeModal()" class="fixed inset-0 bg-slate-900/50 z-50 hidden items-center justify-center p-4 backdrop-blur-xs">
-        <div class="bg-white rounded-2xl border border-slate-200 shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden">
-            <div class="px-6 py-4 border-b border-slate-200 flex items-center justify-between bg-slate-50/60">
-                <h3 id="modal-title" class="font-bold text-slate-800 text-base">Chi tiết</h3>
-                <button onclick="closeModal()" class="w-8 h-8 rounded-lg hover:bg-slate-200/70 text-slate-500 font-bold flex items-center justify-center">✕</button>
+    <div id="modal-backdrop" onclick="if(event.target===this) closeModal()" class="fixed inset-0 bg-slate-900/60 z-50 hidden items-center justify-center p-4 backdrop-blur-xs transition-opacity">
+        <div class="bg-white rounded-3xl border border-slate-200/90 shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden animate-page">
+            <div class="px-6 py-4 border-b border-slate-200/80 flex items-center justify-between bg-gradient-to-r from-slate-50 to-blue-50/40">
+                <h3 id="modal-title" class="font-extrabold text-slate-800 text-base">Chi tiết</h3>
+                <button onclick="closeModal()" class="w-8 h-8 rounded-xl hover:bg-slate-200/70 text-slate-500 font-bold flex items-center justify-center transition-colors">✕</button>
             </div>
             <div id="modal-body" class="p-6 overflow-y-auto"></div>
         </div>
@@ -151,9 +184,21 @@ let repairs = [];
 let ioTransactions = [];
 let employees = [
     { id: 'TV001', name: 'Bắc IT', username: 'bacit', dept: 'Hạ tầng IT', role: 'Quản trị viên', email: 'bac.it@vntech.vn', phone: '0945633345', region: 'Miền Bắc', status: 'Đang hoạt động', registeredAt: '2026-01-01' },
-    { id: 'TV002', name: 'Bình IT', username: 'binhit', dept: 'Kỹ thuật IT', role: 'Chuyên viên IT', email: 'binh.it@vntech.vn', phone: '0939348848', region: 'Miền Nam', status: 'Đang hoạt động', registeredAt: '2026-01-01' }
+    { id: 'TV002', name: 'Bình IT', username: 'binhit', dept: 'Kỹ thuật IT', role: 'Quản trị viên', email: 'binh.it@vntech.vn', phone: '0939348848', region: 'Miền Nam', status: 'Đang hoạt động', registeredAt: '2026-01-01' }
 ];
-let currentUser = employees[0];
+let currentUser = null;
+
+function isAdmin() {
+    return !!(currentUser && currentUser.role === 'Quản trị viên');
+}
+
+function requireAdmin() {
+    if (!isAdmin()) {
+        showToast('Chỉ tài khoản Quản trị viên đăng nhập mới được phép thực hiện thao tác này!', 'warning');
+        return false;
+    }
+    return true;
+}
 
 let currentPage = 'dashboard';
 let computerFilters = { search: '', region: 'ALL', status: 'ALL' };
@@ -170,7 +215,7 @@ function loadState() {
             if (Array.isArray(parsed.repairs)) repairs = parsed.repairs;
             if (Array.isArray(parsed.ioTransactions)) ioTransactions = parsed.ioTransactions;
             if (Array.isArray(parsed.employees) && parsed.employees.length > 0) employees = parsed.employees;
-            if (parsed.currentUser) currentUser = parsed.currentUser;
+            if (parsed.currentUser !== undefined) currentUser = parsed.currentUser;
         }
     } catch (e) {
         console.warn('Không thể tải dữ liệu lưu trữ:', e);
@@ -190,215 +235,33 @@ function updateHeaderUserUI() {
     const nameEl = document.getElementById('header-user-name');
     const roleEl = document.getElementById('header-user-role');
     const avatarEl = document.getElementById('header-user-avatar');
-    if (nameEl && currentUser) nameEl.textContent = currentUser.name;
-    if (roleEl && currentUser) roleEl.textContent = `${currentUser.role} • ${currentUser.region}`;
-    if (avatarEl && currentUser) {
-        const parts = currentUser.name.trim().split(' ');
-        avatarEl.textContent = parts[parts.length - 1].slice(0, 2).toUpperCase();
+    const authBtn = document.getElementById('header-auth-btn');
+    if (currentUser) {
+        if (nameEl) nameEl.textContent = currentUser.name;
+        if (roleEl) roleEl.textContent = currentUser.role;
+        if (avatarEl) {
+            const parts = currentUser.name.trim().split(' ');
+            avatarEl.textContent = parts[parts.length - 1].slice(0, 2).toUpperCase();
+            avatarEl.className = isAdmin()
+                ? 'w-10 h-10 rounded-full bg-gradient-to-br from-blue-600 to-indigo-600 text-white font-extrabold text-xs flex items-center justify-center ring-2 ring-blue-100 shadow-xs'
+                : 'w-10 h-10 rounded-full bg-slate-200 text-slate-700 font-extrabold text-xs flex items-center justify-center ring-2 ring-white shadow-xs';
+        }
+        if (authBtn) {
+            authBtn.textContent = 'Tài khoản / Đăng xuất';
+            authBtn.className = 'px-3.5 py-2 text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200/80 rounded-xl transition-all';
+        }
+    } else {
+        if (nameEl) nameEl.textContent = 'Khách (Chưa đăng nhập)';
+        if (roleEl) roleEl.textContent = 'Chỉ xem số liệu';
+        if (avatarEl) {
+            avatarEl.textContent = '?';
+            avatarEl.className = 'w-10 h-10 rounded-full bg-slate-100 text-slate-500 font-extrabold text-xs flex items-center justify-center ring-2 ring-white';
+        }
+        if (authBtn) {
+            authBtn.textContent = 'Đăng ký / Đăng nhập';
+            authBtn.className = 'px-3.5 py-2 text-xs font-bold text-white bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 rounded-xl shadow-xs shadow-blue-500/20 transition-all';
+        }
     }
-}
-// ... existing code ... -->
-function renderEmployees(container) {
-    container.innerHTML = `
-        <div class="flex flex-wrap items-center justify-between gap-3">
-            <div>
-                <h2 class="text-lg font-bold text-slate-800">Danh sách Thành viên Đã Đăng ký</h2>
-                <p class="text-xs text-slate-500">Tự động cập nhật danh sách các thành viên đăng ký tài khoản trong hệ thống (${employees.length} thành viên)</p>
-            </div>
-            <button onclick="openAuthModal('register')" class="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-xs transition-colors">
-                + ĐĂNG KÝ TÀI KHOẢN MỚI
-            </button>
-        </div>
-
-        <div class="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-xs">
-            <div class="overflow-x-auto">
-                <table class="w-full text-left border-collapse text-xs">
-                    <thead>
-                        <tr class="bg-slate-50 border-b border-slate-200 text-slate-600 font-bold uppercase tracking-wider">
-                            <th class="py-3.5 px-4">MÃ TV</th>
-                            <th class="py-3.5 px-4">HỌ TÊN THÀNH VIÊN</th>
-                            <th class="py-3.5 px-4">TÊN ĐĂNG NHẬP</th>
-                            <th class="py-3.5 px-4">VAI TRÒ / BỘ PHẬN</th>
-                            <th class="py-3.5 px-4">MIỀN</th>
-                            <th class="py-3.5 px-4">LIÊN HỆ</th>
-                            <th class="py-3.5 px-4">NGÀY ĐĂNG KÝ</th>
-                            <th class="py-3.5 px-4">TRẠNG THÁI</th>
-                        </tr>
-                    </thead>
-                    <tbody class="divide-y divide-slate-100">
-                        ${employees.map(emp => `
-                            <tr class="hover:bg-slate-50/70">
-                                <td class="py-3.5 px-4 font-bold text-blue-600">${emp.id}</td>
-                                <td class="py-3.5 px-4 font-semibold text-slate-800">
-                                    ${emp.name}
-                                    ${currentUser && currentUser.id === emp.id ? '<span class="ml-1.5 px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 text-[10px] font-bold">Đang dùng</span>' : ''}
-                                </td>
-                                <td class="py-3.5 px-4 font-mono text-slate-600">${emp.username || '-'}</td>
-                                <td class="py-3.5 px-4">${emp.role} <span class="text-slate-400">(${emp.dept})</span></td>
-                                <td class="py-3.5 px-4"><span class="px-2.5 py-1 rounded-lg bg-slate-100 text-slate-700 font-semibold">${emp.region}</span></td>
-                                <td class="py-3.5 px-4 text-slate-500">${emp.phone || '-'} • ${emp.email || '-'}</td>
-                                <td class="py-3.5 px-4 text-slate-500">${emp.registeredAt || '-'}</td>
-                                <td class="py-3.5 px-4"><span class="px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 font-semibold">${emp.status || 'Đang hoạt động'}</span></td>
-                            </tr>
-                        `).join('')}
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    `;
-}
-
-function openAuthModal(tab = 'register') {
-    const isReg = tab === 'register';
-    openModal(isReg ? 'Đăng ký Tài khoản Thành viên' : 'Đăng nhập Hệ thống', `
-        <div class="space-y-4 text-xs">
-            <div class="flex gap-2 p-1 rounded-xl bg-slate-100">
-                <button type="button" onclick="openAuthModal('register')" class="flex-1 py-2 rounded-lg font-bold transition-colors ${isReg ? 'bg-white text-blue-600 shadow-xs' : 'text-slate-600'}">
-                    Đăng ký tài khoản
-                </button>
-                <button type="button" onclick="openAuthModal('login')" class="flex-1 py-2 rounded-lg font-bold transition-colors ${!isReg ? 'bg-white text-blue-600 shadow-xs' : 'text-slate-600'}">
-                    Đăng nhập
-                </button>
-            </div>
-
-            ${isReg ? `
-                <form onsubmit="submitRegisterMember(event)" class="space-y-3.5">
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        <div>
-                            <label class="block font-bold text-slate-700 mb-1">Họ và tên thành viên *</label>
-                            <input id="reg-name" type="text" required placeholder="VD: Nguyễn Văn A"
-                                class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500">
-                        </div>
-                        <div>
-                            <label class="block font-bold text-slate-700 mb-1">Tên đăng nhập *</label>
-                            <input id="reg-username" type="text" required placeholder="VD: nguyenvana"
-                                class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500">
-                        </div>
-                    </div>
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        <div>
-                            <label class="block font-bold text-slate-700 mb-1">Số điện thoại *</label>
-                            <input id="reg-phone" type="text" inputmode="numeric" required oninput="this.value=this.value.replace(/[^0-9]/g,'')" placeholder="VD: 0901234567"
-                                class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500">
-                        </div>
-                        <div>
-                            <label class="block font-bold text-slate-700 mb-1">Email</label>
-                            <input id="reg-email" type="email" placeholder="VD: thanhvien@vntech.vn"
-                                class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500">
-                        </div>
-                    </div>
-                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                        <div>
-                            <label class="block font-bold text-slate-700 mb-1">Khu vực (Miền)</label>
-                            <select id="reg-region" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white">
-                                <option value="Miền Bắc">Miền Bắc</option>
-                                <option value="Miền Trung">Miền Trung</option>
-                                <option value="Miền Nam">Miền Nam</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label class="block font-bold text-slate-700 mb-1">Bộ phận</label>
-                            <input id="reg-dept" type="text" value="Kỹ thuật IT"
-                                class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200">
-                        </div>
-                        <div>
-                            <label class="block font-bold text-slate-700 mb-1">Chức vụ / Vai trò</label>
-                            <input id="reg-role" type="text" value="Thành viên"
-                                class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200">
-                        </div>
-                    </div>
-                    <div class="flex justify-end gap-2 pt-3 border-t border-slate-100">
-                        <button type="button" onclick="closeModal()" class="px-4 py-2 rounded-xl bg-slate-100 text-slate-700 font-bold">Hủy</button>
-                        <button type="submit" class="px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold shadow-xs">Hoàn tất Đăng ký</button>
-                    </div>
-                </form>
-            ` : `
-                <form onsubmit="submitLoginMember(event)" class="space-y-3.5">
-                    <div>
-                        <label class="block font-bold text-slate-700 mb-1">Chọn tài khoản thành viên đã đăng ký</label>
-                        <select id="login-member-id" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white">
-                            ${employees.map(m => `<option value="${m.id}" ${currentUser && currentUser.id === m.id ? 'selected' : ''}>${m.name} (@${m.username}) - ${m.region}</option>`).join('')}
-                        </select>
-                    </div>
-                    <div class="flex justify-end gap-2 pt-3 border-t border-slate-100">
-                        <button type="button" onclick="closeModal()" class="px-4 py-2 rounded-xl bg-slate-100 text-slate-700 font-bold">Hủy</button>
-                        <button type="submit" class="px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold shadow-xs">Đăng nhập</button>
-                    </div>
-                </form>
-            `}
-        </div>
-    `);
-}
-
-function submitRegisterMember(e) {
-    e.preventDefault();
-    const name = document.getElementById('reg-name').value.trim();
-    const username = document.getElementById('reg-username').value.trim().toLowerCase();
-    const phone = document.getElementById('reg-phone').value.trim();
-    const email = document.getElementById('reg-email').value.trim() || '-';
-    const region = document.getElementById('reg-region').value;
-    const dept = document.getElementById('reg-dept').value.trim() || 'Thành viên';
-    const role = document.getElementById('reg-role').value.trim() || 'Thành viên';
-
-    if (employees.some(emp => (emp.username || '').toLowerCase() === username)) {
-        showToast(`Tên đăng nhập "${username}" đã tồn tại!`, 'warning');
-        return;
-    }
-
-    const nextNum = String(employees.length + 1).padStart(3, '0');
-    const newMember = {
-        id: `TV${nextNum}`,
-        name,
-        username,
-        dept,
-        role,
-        email,
-        phone,
-        region,
-        status: 'Đang hoạt động',
-        registeredAt: new Date().toISOString().slice(0, 10)
-    };
-
-    employees.push(newMember);
-    currentUser = newMember;
-    saveState();
-    updateHeaderUserUI();
-    closeModal();
-    navigate('employees');
-    showToast(`Đăng ký thành công! Thành viên "${name}" đã được lưu vào thư mục Thành viên.`);
-}
-
-function submitLoginMember(e) {
-    e.preventDefault();
-    const id = document.getElementById('login-member-id').value;
-    const found = employees.find(m => m.id === id);
-    if (found) {
-        currentUser = found;
-        saveState();
-        updateHeaderUserUI();
-        closeModal();
-        renderCurrentPage();
-        showToast(`Đã đăng nhập với tài khoản: ${found.name}`);
-    }
-}
-
-function saveState() {
-    try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify({ computers, repairs, ioTransactions }));
-    } catch (e) {
-        console.warn('Không thể lưu dữ liệu:', e);
-    }
-}
-
-function resetAllData() {
-    computers = [];
-    repairs = [];
-    ioTransactions = [];
-    quickSearchQuery = '';
-    quickStatusFilter = 'ALL';
-    saveState();
-    renderCurrentPage();
-    showToast('Đã đặt lại toàn bộ dữ liệu hệ thống về 0', 'info');
 }
 
 // ============================================================================
@@ -483,8 +346,8 @@ function navigate(page) {
     document.querySelectorAll('.nav-item').forEach(btn => {
         const isActive = btn.getAttribute('data-page') === page;
         btn.className = isActive
-            ? 'nav-item w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl transition-colors text-left bg-blue-600 text-white shadow-xs'
-            : 'nav-item w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl transition-colors text-left text-slate-600 hover:bg-slate-100';
+            ? 'nav-item w-full flex items-center gap-3 px-3.5 py-3 rounded-xl transition-all text-left bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md shadow-blue-600/25 font-bold'
+            : 'nav-item w-full flex items-center gap-3 px-3.5 py-3 rounded-xl transition-all text-left text-slate-300 hover:bg-slate-800/80 hover:text-white font-medium';
     });
 
     const sidebar = document.getElementById('sidebar');
@@ -500,6 +363,9 @@ function renderCurrentPage() {
 
     const main = document.getElementById('main-content');
     if (!main) return;
+    main.classList.remove('animate-page');
+    void main.offsetWidth;
+    main.classList.add('animate-page');
 
     switch (currentPage) {
         case 'dashboard': renderDashboard(main); break;
@@ -519,34 +385,46 @@ function renderCurrentPage() {
 // ============================================================================
 function renderRegionMiniCard(region) {
     const stats = getRegionStats(region);
+    const accentMap = {
+        'Miền Bắc': { badge: 'bg-blue-50 text-blue-700 border-blue-200/80', bar: 'from-blue-600 to-indigo-600' },
+        'Miền Trung': { badge: 'bg-indigo-50 text-indigo-700 border-indigo-200/80', bar: 'from-indigo-500 to-purple-600' },
+        'Miền Nam': { badge: 'bg-sky-50 text-sky-700 border-sky-200/80', bar: 'from-sky-500 to-blue-600' }
+    };
+    const theme = accentMap[region] || accentMap['Miền Bắc'];
+
     return `
-        <div class="bg-white rounded-2xl border border-slate-200 p-5 shadow-xs hover:shadow-md transition-shadow space-y-4">
-            <div class="flex items-center justify-between">
-                <span class="px-3 py-1 rounded-lg bg-blue-50 text-blue-700 font-bold text-xs">🏢 ${region.toUpperCase()}</span>
-                <button onclick="computerFilters.region='${region}'; navigate('computers')" class="text-xs font-semibold text-slate-500 hover:text-blue-600">Chi tiết →</button>
-            </div>
-            <div class="flex items-baseline justify-between border-b border-slate-100 pb-3">
-                <span class="text-xs text-slate-500 font-medium">Tổng số máy</span>
-                <span class="text-2xl font-extrabold text-slate-900">${stats.total}</span>
-            </div>
-            <div class="grid grid-cols-2 gap-2.5 text-xs">
-                <div class="flex justify-between p-2 rounded-lg bg-emerald-50/70 text-emerald-800">
-                    <span>🟢 Sửa xong</span><strong>${stats.inUse}</strong>
+        <div class="card-elevated rounded-2xl overflow-hidden flex flex-col justify-between">
+            <div class="h-1.5 w-full bg-gradient-to-r ${theme.bar}"></div>
+            <div class="p-5 space-y-4">
+                <div class="flex items-center justify-between">
+                    <span class="px-3 py-1 rounded-xl border ${theme.badge} font-extrabold text-xs tracking-wide">🏢 ${region.toUpperCase()}</span>
+                    <button onclick="computerFilters.region='${region}'; navigate('computers')" class="text-xs font-bold text-blue-600 hover:text-blue-800 flex items-center gap-1 transition-colors">
+                        Chi tiết <span>→</span>
+                    </button>
                 </div>
-                <div class="flex justify-between p-2 rounded-lg bg-amber-50/70 text-amber-800">
-                    <span>🟡 Đang sửa</span><strong>${stats.repairing}</strong>
+                <div class="flex items-baseline justify-between border-b border-slate-100 pb-3.5">
+                    <span class="text-xs text-slate-500 font-semibold">Tổng số máy quản lý</span>
+                    <span class="text-3xl font-extrabold text-slate-900 tracking-tight">${stats.total}</span>
                 </div>
-                <div class="flex justify-between p-2 rounded-lg bg-orange-50/70 text-orange-800">
-                    <span>🟠 Chờ xử lý</span><strong>${stats.pending}</strong>
-                </div>
-                <div class="flex justify-between p-2 rounded-lg bg-blue-50/70 text-blue-800">
-                    <span>🔵 Đã gửi trả chi nhánh</span><strong>${stats.inStock}</strong>
-                </div>
-                <div class="flex justify-between p-2 rounded-lg bg-purple-50/70 text-purple-800">
-                    <span>🟣 Gửi nhà cung cấp</span><strong>${stats.vendor}</strong>
-                </div>
-                <div class="flex justify-between p-2 rounded-lg bg-slate-100 text-slate-800">
-                    <span>⚫ Máy thanh lý</span><strong>${stats.disposed}</strong>
+                <div class="grid grid-cols-2 gap-2.5 text-xs">
+                    <div class="flex items-center justify-between p-2.5 rounded-xl bg-emerald-50/80 border border-emerald-100 text-emerald-800">
+                        <span class="font-medium">🟢 Sửa xong</span><strong class="text-sm">${stats.inUse}</strong>
+                    </div>
+                    <div class="flex items-center justify-between p-2.5 rounded-xl bg-amber-50/80 border border-amber-100 text-amber-800">
+                        <span class="font-medium">🟡 Đang sửa</span><strong class="text-sm">${stats.repairing}</strong>
+                    </div>
+                    <div class="flex items-center justify-between p-2.5 rounded-xl bg-orange-50/80 border border-orange-100 text-orange-800">
+                        <span class="font-medium">🟠 Chờ xử lý</span><strong class="text-sm">${stats.pending}</strong>
+                    </div>
+                    <div class="flex items-center justify-between p-2.5 rounded-xl bg-blue-50/80 border border-blue-100 text-blue-800">
+                        <span class="font-medium">🔵 Trả chi nhánh</span><strong class="text-sm">${stats.inStock}</strong>
+                    </div>
+                    <div class="flex items-center justify-between p-2.5 rounded-xl bg-purple-50/80 border border-purple-100 text-purple-800">
+                        <span class="font-medium">🟣 Gửi NCC</span><strong class="text-sm">${stats.vendor}</strong>
+                    </div>
+                    <div class="flex items-center justify-between p-2.5 rounded-xl bg-slate-100/90 border border-slate-200/80 text-slate-800">
+                        <span class="font-medium">⚫ Thanh lý</span><strong class="text-sm">${stats.disposed}</strong>
+                    </div>
                 </div>
             </div>
         </div>
@@ -612,50 +490,58 @@ function renderDashboard(container) {
         <!-- THANH HÀNH ĐỘNG NHANH -->
         <div class="flex flex-wrap items-center justify-between gap-3">
             <div>
-                <h2 class="text-lg font-bold text-slate-800">Bảng điều khiển Tổng quan</h2>
-                <p class="text-xs text-slate-500">Theo dõi trạng thái thiết bị, sửa chữa và phân tích vận hành 3 miền</p>
+                <h2 class="text-xl font-extrabold text-slate-900 tracking-tight">Bảng điều khiển Tổng quan</h2>
+                <p class="text-xs text-slate-500 mt-0.5">Theo dõi trạng thái thiết bị, sửa chữa và phân tích vận hành 3 miền theo thời gian thực</p>
             </div>
-            <div class="flex flex-wrap gap-2">
-                <button onclick="openNewRepairModal()" class="px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold shadow-xs transition-colors">
-                    ⚠️ NHẬP MÁY LỖI
-                </button>
+            <div class="flex flex-wrap items-center gap-2">
+                ${isAdmin()
+                    ? `<button onclick="openNewRepairModal()" class="px-5 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white text-xs font-extrabold shadow-md shadow-amber-500/25 transition-all flex items-center gap-2">
+                        <span>⚠️</span> <span>NHẬP MÁY LỖI</span>
+                    </button>`
+                    : `<span class="px-4 py-2.5 rounded-xl bg-white border border-slate-200 text-slate-600 text-xs font-semibold shadow-2xs flex items-center gap-2">
+                        <span>🔒</span> <span>Chế độ chỉ xem • Đăng nhập Quản trị viên để nhập máy lỗi</span>
+                    </span>`
+                }
             </div>
         </div>
 
         <!-- TRA CỨU NHANH -->
-        <div class="bg-white rounded-2xl border border-slate-200 p-5 shadow-xs space-y-4">
+        <div class="card-elevated rounded-2xl p-5 sm:p-6 space-y-4">
             <div class="flex flex-wrap items-center justify-between gap-2">
-                <span class="text-xs font-extrabold uppercase tracking-wider text-slate-500">TRA CỨU NHANH</span>
-                <span class="text-[11px] text-slate-400">Nhập mã số máy hoặc nhấn vào thẻ trạng thái bên dưới để lọc</span>
+                <div class="flex items-center gap-2">
+                    <span class="w-2 h-2 rounded-full bg-blue-600"></span>
+                    <span class="text-xs font-extrabold uppercase tracking-wider text-slate-700">TRA CỨU NHANH THIẾT BỊ</span>
+                </div>
+                <span class="text-[11px] text-slate-400 font-medium">Nhập mã số máy hoặc chọn nhanh trạng thái bên dưới để lọc</span>
             </div>
 
             <div class="relative">
-                <span class="absolute inset-y-0 left-3.5 flex items-center text-slate-400 text-sm">🔍</span>
+                <span class="absolute inset-y-0 left-4 flex items-center text-slate-400 text-sm">🔍</span>
                 <input id="quick-search-input" type="text" value="${quickSearchQuery}" oninput="handleQuickSearch(this.value)"
-                    placeholder="Nhập mã số máy cần tra cứu..."
-                    class="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    placeholder="Nhập mã số máy hoặc tên khách hàng cần tra cứu..."
+                    class="w-full pl-11 pr-4 py-3 rounded-xl bg-slate-50/70 border border-slate-200 text-sm font-medium focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all">
             </div>
 
             <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
-                <button onclick="toggleQuickStatus('Sửa xong')" class="flex items-center justify-between p-3 rounded-xl border transition-all ${quickStatusFilter === 'Sửa xong' ? 'ring-2 ring-emerald-500 bg-emerald-50 border-emerald-300' : 'bg-emerald-50/60 border-emerald-200 hover:bg-emerald-50'}">
-                    <span class="font-semibold text-emerald-800">🟢 Sửa xong</span>
-                    <strong class="text-base text-emerald-900">${globalStats.inUse}</strong>
+                <button onclick="toggleQuickStatus('Sửa xong')" class="flex items-center justify-between p-3.5 rounded-xl border transition-all ${quickStatusFilter === 'Sửa xong' ? 'ring-2 ring-emerald-500 bg-emerald-50 border-emerald-300 shadow-xs' : 'bg-emerald-50/60 border-emerald-200/80 hover:bg-emerald-50'}">
+                    <span class="font-bold text-emerald-800">🟢 Sửa xong</span>
+                    <strong class="text-lg font-extrabold text-emerald-900">${globalStats.inUse}</strong>
                 </button>
-                <button onclick="toggleQuickStatus('Đang sửa')" class="flex items-center justify-between p-3 rounded-xl border transition-all ${quickStatusFilter === 'Đang sửa' ? 'ring-2 ring-amber-500 bg-amber-50 border-amber-300' : 'bg-amber-50/60 border-amber-200 hover:bg-amber-50'}">
-                    <span class="font-semibold text-amber-800">🟡 Đang sửa</span>
-                    <strong class="text-base text-amber-900">${globalStats.repairing}</strong>
+                <button onclick="toggleQuickStatus('Đang sửa')" class="flex items-center justify-between p-3.5 rounded-xl border transition-all ${quickStatusFilter === 'Đang sửa' ? 'ring-2 ring-amber-500 bg-amber-50 border-amber-300 shadow-xs' : 'bg-amber-50/60 border-amber-200/80 hover:bg-amber-50'}">
+                    <span class="font-bold text-amber-800">🟡 Đang sửa</span>
+                    <strong class="text-lg font-extrabold text-amber-900">${globalStats.repairing}</strong>
                 </button>
-                <button onclick="toggleQuickStatus('Chờ xử lý')" class="flex items-center justify-between p-3 rounded-xl border transition-all ${quickStatusFilter === 'Chờ xử lý' ? 'ring-2 ring-orange-500 bg-orange-50 border-orange-300' : 'bg-orange-50/60 border-orange-200 hover:bg-orange-50'}">
-                    <span class="font-semibold text-orange-800">🟠 Chờ xử lý</span>
-                    <strong class="text-base text-orange-900">${globalStats.pending}</strong>
+                <button onclick="toggleQuickStatus('Chờ xử lý')" class="flex items-center justify-between p-3.5 rounded-xl border transition-all ${quickStatusFilter === 'Chờ xử lý' ? 'ring-2 ring-orange-500 bg-orange-50 border-orange-300 shadow-xs' : 'bg-orange-50/60 border-orange-200/80 hover:bg-orange-50'}">
+                    <span class="font-bold text-orange-800">🟠 Chờ xử lý</span>
+                    <strong class="text-lg font-extrabold text-orange-900">${globalStats.pending}</strong>
                 </button>
-                <button onclick="toggleQuickStatus('Đã gửi trả chi nhánh')" class="flex items-center justify-between p-3 rounded-xl border transition-all ${quickStatusFilter === 'Đã gửi trả chi nhánh' ? 'ring-2 ring-blue-500 bg-blue-50 border-blue-300' : 'bg-blue-50/60 border-blue-200 hover:bg-blue-50'}">
-                    <span class="font-semibold text-blue-800">🔵 Đã gửi trả chi nhánh</span>
-                    <strong class="text-base text-blue-900">${globalStats.inStock}</strong>
+                <button onclick="toggleQuickStatus('Đã gửi trả chi nhánh')" class="flex items-center justify-between p-3.5 rounded-xl border transition-all ${quickStatusFilter === 'Đã gửi trả chi nhánh' ? 'ring-2 ring-blue-500 bg-blue-50 border-blue-300 shadow-xs' : 'bg-blue-50/60 border-blue-200/80 hover:bg-blue-50'}">
+                    <span class="font-bold text-blue-800">🔵 Đã gửi trả chi nhánh</span>
+                    <strong class="text-lg font-extrabold text-blue-900">${globalStats.inStock}</strong>
                 </button>
             </div>
 
-            <div id="quick-search-results" class="space-y-2"></div>
+            <div id="quick-search-results" class="space-y-2.5"></div>
         </div>
 
         <!-- 3 THẺ KHU VỰC -->
@@ -666,70 +552,78 @@ function renderDashboard(container) {
         </div>
 
         <!-- TỔNG QUAN TOÀN CÔNG TY & PHÂN TÍCH AI -->
-        <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs space-y-6">
-            <div class="flex flex-wrap items-center justify-between gap-2">
-                <h3 class="text-sm font-extrabold uppercase tracking-wider text-slate-800">TỔNG QUAN TOÀN CÔNG TY</h3>
-                <span class="text-xs text-slate-400">Số liệu cập nhật thời gian thực</span>
+        <div class="card-elevated rounded-2xl p-6 space-y-6">
+            <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-4">
+                <div>
+                    <h3 class="text-sm font-extrabold uppercase tracking-wider text-slate-800">TỔNG QUAN TOÀN CÔNG TY</h3>
+                    <p class="text-xs text-slate-400 mt-0.5">Thống kê hợp nhất toàn bộ thiết bị trên 3 miền</p>
+                </div>
+                <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 text-[11px] font-bold border border-emerald-200">
+                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping"></span>
+                    Cập nhật thời gian thực
+                </span>
             </div>
 
             <div class="grid grid-cols-2 sm:grid-cols-4 gap-3.5 text-center">
-                <div class="p-4 rounded-2xl bg-slate-50 border border-slate-200/80">
+                <div class="p-4 rounded-2xl bg-gradient-to-b from-slate-50 to-slate-100/70 border border-slate-200/80">
                     <div class="text-2xl font-extrabold text-slate-900">${globalStats.total}</div>
-                    <div class="text-xs text-slate-500 mt-1">Tổng số máy</div>
+                    <div class="text-xs font-semibold text-slate-500 mt-1">Tổng số máy</div>
                 </div>
-                <div class="p-4 rounded-2xl bg-emerald-50/70 border border-emerald-200/80">
+                <div class="p-4 rounded-2xl bg-gradient-to-b from-emerald-50/90 to-emerald-100/40 border border-emerald-200/80">
                     <div class="text-2xl font-extrabold text-emerald-700">${globalStats.inUse}</div>
-                    <div class="text-xs text-emerald-700 mt-1">Sửa xong</div>
+                    <div class="text-xs font-semibold text-emerald-700 mt-1">Sửa xong</div>
                 </div>
-                <div class="p-4 rounded-2xl bg-amber-50/70 border border-amber-200/80">
+                <div class="p-4 rounded-2xl bg-gradient-to-b from-amber-50/90 to-amber-100/40 border border-amber-200/80">
                     <div class="text-2xl font-extrabold text-amber-700">${globalStats.repairing}</div>
-                    <div class="text-xs text-amber-700 mt-1">Đang sửa chữa</div>
+                    <div class="text-xs font-semibold text-amber-700 mt-1">Đang sửa chữa</div>
                 </div>
-                <div class="p-4 rounded-2xl bg-orange-50/70 border border-orange-200/80">
+                <div class="p-4 rounded-2xl bg-gradient-to-b from-orange-50/90 to-orange-100/40 border border-orange-200/80">
                     <div class="text-2xl font-extrabold text-orange-700">${globalStats.pending}</div>
-                    <div class="text-xs text-orange-700 mt-1">Chờ xử lý</div>
+                    <div class="text-xs font-semibold text-orange-700 mt-1">Chờ xử lý</div>
                 </div>
-                <div class="p-4 rounded-2xl bg-blue-50/70 border border-blue-200/80">
+                <div class="p-4 rounded-2xl bg-gradient-to-b from-blue-50/90 to-blue-100/40 border border-blue-200/80">
                     <div class="text-2xl font-extrabold text-blue-700">${globalStats.inStock}</div>
-                    <div class="text-xs text-blue-700 mt-1">Đã gửi trả chi nhánh</div>
+                    <div class="text-xs font-semibold text-blue-700 mt-1">Đã gửi trả chi nhánh</div>
                 </div>
-                <div class="p-4 rounded-2xl bg-indigo-50/70 border border-indigo-200/80">
-                    <div class="text-2xl font-extrabold text-indigo-700">${globalStats.exportedCount}</div>
-                    <div class="text-xs text-indigo-700 mt-1">Đã xuất kho</div>
+                <div class="p-4 rounded-2xl bg-gradient-to-b from-purple-50/90 to-purple-100/40 border border-purple-200/80">
+                    <div class="text-2xl font-extrabold text-purple-700">${globalStats.vendor}</div>
+                    <div class="text-xs font-semibold text-purple-700 mt-1">Gửi nhà cung cấp</div>
                 </div>
-                <div class="p-4 rounded-2xl bg-rose-50/70 border border-rose-200/80">
+                <div class="p-4 rounded-2xl bg-gradient-to-b from-rose-50/90 to-rose-100/40 border border-rose-200/80">
                     <div class="text-2xl font-extrabold text-rose-700">${globalStats.broken}</div>
-                    <div class="text-xs text-rose-700 mt-1">Máy hỏng</div>
+                    <div class="text-xs font-semibold text-rose-700 mt-1">Máy hỏng</div>
                 </div>
-                <div class="p-4 rounded-2xl bg-slate-100 border border-slate-200">
+                <div class="p-4 rounded-2xl bg-gradient-to-b from-slate-100 to-slate-200/60 border border-slate-300/70">
                     <div class="text-2xl font-extrabold text-slate-700">${globalStats.disposed}</div>
-                    <div class="text-xs text-slate-600 mt-1">Máy thanh lý</div>
+                    <div class="text-xs font-semibold text-slate-600 mt-1">Máy thanh lý</div>
                 </div>
             </div>
 
             <!-- BIỂU ĐỒ PHÂN BỔ THIẾT BỊ 3 MIỀN -->
-            <div class="h-60">
-                <canvas id="regionOverviewChart"></canvas>
+            <div class="p-4 rounded-2xl bg-slate-50/60 border border-slate-200/70">
+                <div class="h-60">
+                    <canvas id="regionOverviewChart"></canvas>
+                </div>
             </div>
 
             <!-- MÔ-ĐUN AI PHÂN TÍCH CHI PHÍ, RỦI RO & ĐỀ XUẤT NÂNG CẤP -->
-            <div class="pt-5 border-t border-slate-200 space-y-4">
+            <div class="pt-5 border-t border-slate-200/80 space-y-4">
                 <div class="flex flex-wrap items-center justify-between gap-2">
-                    <div class="flex items-center gap-2">
-                        <span class="px-2.5 py-1 rounded-lg bg-indigo-600 text-white text-[11px] font-bold">AI ANALYTICS</span>
-                        <h4 class="text-sm font-bold text-slate-800">Phân tích Chi phí Vận hành, Rủi ro & Đề xuất Tối ưu</h4>
+                    <div class="flex items-center gap-2.5">
+                        <span class="px-3 py-1 rounded-xl bg-gradient-to-r from-indigo-600 to-blue-600 text-white text-[11px] font-extrabold shadow-xs">✨ AI ANALYTICS</span>
+                        <h4 class="text-sm font-extrabold text-slate-800">Phân tích Chi phí Vận hành, Rủi ro & Đề xuất Tối ưu</h4>
                     </div>
-                    <span class="px-3 py-1 rounded-full text-xs font-bold border ${ai.riskLevel.badge}">
+                    <span class="px-3.5 py-1 rounded-full text-xs font-bold border ${ai.riskLevel.badge}">
                         Chỉ số Rủi ro: ${ai.riskScore}/100 • ${ai.riskLevel.label}
                     </span>
                 </div>
 
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
                     <!-- Biểu đồ Chi phí vận hành 3 miền -->
-                    <div class="lg:col-span-2 bg-slate-50/70 rounded-2xl border border-slate-200 p-4 space-y-2">
+                    <div class="lg:col-span-2 bg-gradient-to-br from-slate-50 to-blue-50/30 rounded-2xl border border-slate-200/90 p-4 space-y-2">
                         <div class="flex items-center justify-between text-xs">
                             <span class="font-bold text-slate-700">Biểu đồ Chi phí Sửa chữa & Vận hành theo Miền</span>
-                            <span class="font-extrabold text-amber-700">Tổng: ${ai.totalCost.toLocaleString('vi-VN')} VND</span>
+                            <span class="px-2.5 py-1 rounded-lg bg-amber-100/80 font-extrabold text-amber-800">Tổng: ${ai.totalCost.toLocaleString('vi-VN')} VND</span>
                         </div>
                         <div class="h-48">
                             <canvas id="aiCostChart"></canvas>
@@ -737,31 +631,34 @@ function renderDashboard(container) {
                     </div>
 
                     <!-- Đề xuất Thanh lý & Nâng cấp -->
-                    <div class="bg-slate-50/70 rounded-2xl border border-slate-200 p-4 space-y-3 text-xs">
+                    <div class="bg-gradient-to-br from-slate-50 to-indigo-50/30 rounded-2xl border border-slate-200/90 p-4 space-y-3 text-xs">
                         <div>
-                            <div class="font-bold text-slate-800 mb-1.5">🗑️ Đề xuất Thanh lý (Hư hỏng lặp lại)</div>
+                            <div class="font-extrabold text-slate-800 mb-1.5">🗑️ Đề xuất Thanh lý (Hư hỏng lặp lại)</div>
                             ${ai.repeatedRepairMachines.length === 0
-                                ? `<div class="p-2.5 rounded-xl bg-white border border-slate-200 text-slate-500">Chưa phát hiện máy hư hỏng vượt ngưỡng thanh lý.</div>`
+                                ? `<div class="p-3 rounded-xl bg-white border border-slate-200/80 text-slate-500">Chưa phát hiện máy hư hỏng vượt ngưỡng thanh lý.</div>`
                                 : `<div class="space-y-1.5">
                                     ${ai.repeatedRepairMachines.map(m => `
-                                        <div class="flex items-center justify-between p-2 rounded-xl bg-white border border-rose-200">
+                                        <div class="flex items-center justify-between p-2.5 rounded-xl bg-white border border-rose-200 shadow-2xs">
                                             <div>
                                                 <span class="font-bold text-blue-600">Mã số máy: ${m.id}</span>
                                                 <div class="text-[11px] text-slate-500">${m.region} • ${m.issue || 'Hỏng nặng'}</div>
                                             </div>
-                                            <button onclick="quickChangeStatus('${m.id}', 'Thanh lý', false)" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-rose-600 text-white font-semibold text-[11px]">
-                                                Thanh lý
-                                            </button>
+                                            ${isAdmin()
+                                                ? `<button onclick="quickChangeStatus('${m.id}', 'Thanh lý', false)" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-rose-600 text-white font-bold text-[11px] transition-colors">
+                                                    Thanh lý
+                                                </button>`
+                                                : `<span class="px-2 py-0.5 rounded-lg bg-slate-100 text-slate-500 text-[10px] font-semibold">Chỉ xem</span>`
+                                            }
                                         </div>
                                     `).join('')}
                                 </div>`
                             }
                         </div>
 
-                        <div class="pt-2 border-t border-slate-200">
-                            <div class="font-bold text-slate-800 mb-1.5">🚀 Khuyến nghị Nâng cấp & Tối ưu</div>
+                        <div class="pt-2.5 border-t border-slate-200/80">
+                            <div class="font-extrabold text-slate-800 mb-1.5">🚀 Khuyến nghị Nâng cấp & Tối ưu</div>
                             <ul class="space-y-1.5 text-slate-600">
-                                ${ai.upgrades.map(u => `<li class="p-2 rounded-xl bg-white border border-slate-200 leading-relaxed">• ${u}</li>`).join('')}
+                                ${ai.upgrades.map(u => `<li class="p-2.5 rounded-xl bg-white border border-slate-200/80 leading-relaxed shadow-2xs">• ${u}</li>`).join('')}
                             </ul>
                         </div>
                     </div>
@@ -1037,7 +934,7 @@ function openComputerDetail(id) {
     const issueText = comp.issue || (latestRepair && latestRepair.issue) || '';
     const costVal = Number(comp.cost || (latestRepair && latestRepair.cost) || 0);
     const historyList = comp.history || [];
-    const isEditable = comp.status === 'Chờ xử lý' || comp.status === 'Đang sửa' || comp.status === 'Gửi nhà cung cấp';
+    const canEdit = isAdmin() && (comp.status === 'Chờ xử lý' || comp.status === 'Đang sửa' || comp.status === 'Gửi nhà cung cấp');
 
     openModal(`Chi tiết Thiết bị • ${comp.id}`, `
         <div class="space-y-5 text-xs">
@@ -1049,7 +946,7 @@ function openComputerDetail(id) {
                 <div>${getStatusBadge(comp.status)}</div>
             </div>
 
-            ${isEditable ? `
+            ${canEdit ? `
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                     <div class="p-4 rounded-2xl border border-blue-200 bg-blue-50/20 space-y-1.5">
                         <label for="detail-edit-issue" class="block text-[11px] font-bold text-slate-500 uppercase">Tình trạng lỗi (Chỉnh sửa)</label>
@@ -1091,26 +988,32 @@ function openComputerDetail(id) {
                 </div>
             `}
 
-            <div class="space-y-2">
-                <div class="text-[11px] font-extrabold uppercase tracking-wider text-slate-500">THAO TÁC NHANH</div>
-                <div class="flex flex-wrap gap-2">
-                    <button onclick="quickChangeStatus('${comp.id}', 'Đang sửa')" class="px-3.5 py-2 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 font-bold transition-colors">
-                        🔧 Đang sửa chữa
-                    </button>
-                    <button onclick="quickChangeStatus('${comp.id}', 'Sửa xong')" class="px-3.5 py-2 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 font-bold transition-colors">
-                        ✅ Sửa xong
-                    </button>
-                    <button onclick="quickChangeStatus('${comp.id}', 'Đã gửi trả chi nhánh')" class="px-3.5 py-2 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-800 border border-blue-200 font-bold transition-colors">
-                        🏢 Gửi trả chi nhánh
-                    </button>
-                    <button onclick="quickChangeStatus('${comp.id}', 'Gửi nhà cung cấp')" class="px-3.5 py-2 rounded-xl bg-purple-50 hover:bg-purple-100 text-purple-800 border border-purple-200 font-bold transition-colors">
-                        🚚 Gửi nhà cung cấp
-                    </button>
-                    <button onclick="quickChangeStatus('${comp.id}', 'Thanh lý')" class="px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-300 font-bold transition-colors">
-                        ⚫ Thanh lý
-                    </button>
+            ${isAdmin() ? `
+                <div class="space-y-2">
+                    <div class="text-[11px] font-extrabold uppercase tracking-wider text-slate-500">THAO TÁC NHANH</div>
+                    <div class="flex flex-wrap gap-2">
+                        <button onclick="quickChangeStatus('${comp.id}', 'Đang sửa')" class="px-3.5 py-2 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 font-bold transition-colors">
+                            🔧 Đang sửa chữa
+                        </button>
+                        <button onclick="quickChangeStatus('${comp.id}', 'Sửa xong')" class="px-3.5 py-2 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 font-bold transition-colors">
+                            ✅ Sửa xong
+                        </button>
+                        <button onclick="quickChangeStatus('${comp.id}', 'Đã gửi trả chi nhánh')" class="px-3.5 py-2 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-800 border border-blue-200 font-bold transition-colors">
+                            🏢 Gửi trả chi nhánh
+                        </button>
+                        <button onclick="quickChangeStatus('${comp.id}', 'Gửi nhà cung cấp')" class="px-3.5 py-2 rounded-xl bg-purple-50 hover:bg-purple-100 text-purple-800 border border-purple-200 font-bold transition-colors">
+                            🚚 Gửi nhà cung cấp
+                        </button>
+                        <button onclick="quickChangeStatus('${comp.id}', 'Thanh lý')" class="px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-300 font-bold transition-colors">
+                            ⚫ Thanh lý
+                        </button>
+                    </div>
                 </div>
-            </div>
+            ` : `
+                <div class="p-3 rounded-xl bg-slate-50 border border-slate-200 text-slate-500 text-center font-medium">
+                    🔒 Tài khoản Thành viên chỉ được xem thông tin & lịch sử, không thể thay đổi trạng thái hoặc chỉnh sửa dữ liệu.
+                </div>
+            `}
 
             <div class="space-y-2">
                 <div class="text-[11px] font-extrabold uppercase tracking-wider text-slate-500">LỊCH SỬ HOẠT ĐỘNG (TIMELINE)</div>
@@ -1131,6 +1034,7 @@ function openComputerDetail(id) {
 }
 
 function saveDetailEdits(id) {
+    if (!requireAdmin()) return;
     const issueEl = document.getElementById('detail-edit-issue');
     const regionEl = document.getElementById('detail-edit-region');
     const costEl = document.getElementById('detail-edit-cost');
@@ -1167,6 +1071,7 @@ function saveDetailEdits(id) {
 }
 
 function quickChangeStatus(id, newStatus, reopenModal = true) {
+    if (!requireAdmin()) return;
     const comp = computers.find(c => c.id === id);
     if (!comp) return;
     const todayStr = new Date().toLocaleDateString('vi-VN');
@@ -1204,6 +1109,7 @@ function quickChangeStatus(id, newStatus, reopenModal = true) {
 // 6. BIỂU MẪU TẠO PHIẾU SỬA CHỮA & THÊM MÁY MỚI
 // ============================================================================
 function openNewRepairModal() {
+    if (!requireAdmin()) return;
     const today = new Date().toISOString().slice(0, 10);
     openModal('Tạo Phiếu Sửa Chữa Thiết Bị', `
         <form onsubmit="submitNewRepair(event)" class="space-y-4 text-xs">
@@ -1282,6 +1188,7 @@ function openNewRepairModal() {
 
 function submitNewRepair(e) {
     e.preventDefault();
+    if (!requireAdmin()) return;
     const id = document.getElementById('rep-comp-id').value.trim();
     const brand = document.getElementById('rep-brand').value;
     const region = document.getElementById('rep-region').value;
@@ -1663,35 +1570,48 @@ function renderRegions(container) {
 
 function renderEmployees(container) {
     container.innerHTML = `
-        <div>
-            <h2 class="text-lg font-bold text-slate-800">Danh sách Nhân viên & Phụ trách</h2>
-            <p class="text-xs text-slate-500">Quản lý nhân sự và thiết bị cấp phát theo 3 miền</p>
+        <div class="flex flex-wrap items-center justify-between gap-3">
+            <div>
+                <h2 class="text-xl font-extrabold text-slate-900 tracking-tight">Danh sách Thành viên Đã Đăng ký</h2>
+                <p class="text-xs text-slate-500 mt-0.5">Tự động cập nhật danh sách các thành viên đăng ký tài khoản trong hệ thống (${employees.length} thành viên)</p>
+            </div>
+            <button onclick="openManageAccountsModal()" class="px-4 py-2.5 rounded-xl bg-gradient-to-r from-rose-600 to-red-600 hover:from-rose-700 hover:to-red-700 text-white text-xs font-bold shadow-sm transition-all flex items-center gap-1.5">
+                <span>🗑️</span> <span>XÓA TÀI KHOẢN</span>
+            </button>
         </div>
 
-        <div class="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-xs">
+        <div class="card-elevated rounded-2xl overflow-hidden">
             <div class="overflow-x-auto">
                 <table class="w-full text-left border-collapse text-xs">
                     <thead>
-                        <tr class="bg-slate-50 border-b border-slate-200 text-slate-600 font-bold uppercase tracking-wider">
-                            <th class="py-3.5 px-4">MÃ NV</th>
-                            <th class="py-3.5 px-4">HỌ TÊN</th>
-                            <th class="py-3.5 px-4">PHÒNG BAN</th>
-                            <th class="py-3.5 px-4">CHỨC VỤ</th>
+                        <tr class="bg-slate-50/90 border-b border-slate-200 text-slate-600 font-extrabold uppercase tracking-wider">
+                            <th class="py-3.5 px-4">MÃ TV</th>
+                            <th class="py-3.5 px-4">HỌ TÊN THÀNH VIÊN</th>
+                            <th class="py-3.5 px-4">TÊN ĐĂNG NHẬP</th>
+                            <th class="py-3.5 px-4">VAI TRÒ / BỘ PHẬN</th>
                             <th class="py-3.5 px-4">MIỀN</th>
                             <th class="py-3.5 px-4">LIÊN HỆ</th>
+                            <th class="py-3.5 px-4">NGÀY ĐĂNG KÝ</th>
                             <th class="py-3.5 px-4">TRẠNG THÁI</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-slate-100">
                         ${employees.map(emp => `
-                            <tr class="hover:bg-slate-50/70">
+                            <tr class="hover:bg-blue-50/30 transition-colors">
                                 <td class="py-3.5 px-4 font-bold text-blue-600">${emp.id}</td>
-                                <td class="py-3.5 px-4 font-semibold text-slate-800">${emp.name}</td>
-                                <td class="py-3.5 px-4">${emp.dept}</td>
-                                <td class="py-3.5 px-4 text-slate-500">${emp.role}</td>
-                                <td class="py-3.5 px-4">${emp.region}</td>
-                                <td class="py-3.5 px-4 text-slate-500">${emp.phone} • ${emp.email}</td>
-                                <td class="py-3.5 px-4"><span class="px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 font-semibold">${emp.status}</span></td>
+                                <td class="py-3.5 px-4 font-bold text-slate-800">
+                                    ${emp.name}
+                                    ${currentUser && currentUser.id === emp.id ? '<span class="ml-1.5 px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 text-[10px] font-bold">Đang dùng</span>' : ''}
+                                </td>
+                                <td class="py-3.5 px-4 font-mono text-slate-600">${emp.username || '-'}</td>
+                                <td class="py-3.5 px-4">
+                                    <span class="px-2 py-0.5 rounded-md font-bold ${emp.role === 'Quản trị viên' ? 'bg-indigo-50 text-indigo-700' : 'bg-slate-100 text-slate-700'}">${emp.role}</span>
+                                    <span class="text-slate-400 ml-1">(${emp.dept})</span>
+                                </td>
+                                <td class="py-3.5 px-4"><span class="px-2.5 py-1 rounded-lg bg-slate-100 text-slate-700 font-semibold">${emp.region}</span></td>
+                                <td class="py-3.5 px-4 text-slate-500">${emp.phone || '-'} • ${emp.email || '-'}</td>
+                                <td class="py-3.5 px-4 text-slate-500">${emp.registeredAt || '-'}</td>
+                                <td class="py-3.5 px-4"><span class="px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 font-bold border border-emerald-200/80">${emp.status || 'Đang hoạt động'}</span></td>
                             </tr>
                         `).join('')}
                     </tbody>
@@ -1766,19 +1686,331 @@ function renderSettings(container) {
         <div class="max-w-xl bg-white rounded-2xl border border-slate-200 p-6 shadow-xs space-y-4 text-xs">
             <h2 class="text-base font-bold text-slate-800">Cài đặt & Quản trị Dữ liệu</h2>
             <p class="text-slate-500 leading-relaxed">
-                Hệ thống tự động lưu trữ mọi thao tác nhập liệu vào bộ nhớ trình duyệt. Nếu muốn xóa toàn bộ dữ liệu thử nghiệm để nhập lại từ đầu, bạn có thể sử dụng nút bên dưới.
+                Hệ thống tự động lưu trữ mọi thao tác nhập liệu vào bộ nhớ trình duyệt. Chỉ tài khoản <strong>Quản trị viên</strong> mới có quyền đặt lại dữ liệu hệ thống.
             </p>
             <div class="pt-2">
-                <button onclick="resetAllData()" class="px-4 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold shadow-xs">
-                    🗑️ Xóa toàn bộ dữ liệu & Đặt lại về 0
-                </button>
+                ${isAdmin()
+                    ? `<button onclick="resetAllData()" class="px-4 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold shadow-xs">
+                        🗑️ Xóa toàn bộ dữ liệu & Đặt lại về 0
+                    </button>`
+                    : `<span class="inline-block px-3.5 py-2 rounded-xl bg-slate-100 border border-slate-200 text-slate-500 font-semibold">
+                        🔒 Chỉ Quản trị viên mới có quyền xóa dữ liệu
+                    </span>`
+                }
             </div>
         </div>
     `;
 }
 
+function resetAllData() {
+    if (!requireAdmin()) return;
+    openModal('Xác nhận Đặt lại Toàn bộ Dữ liệu', `
+        <div class="space-y-4 text-xs">
+            <p class="text-slate-600 leading-relaxed">Bạn có chắc chắn muốn xóa toàn bộ danh sách thiết bị, phiếu sửa chữa và lịch sử kho về trạng thái trống ban đầu?</p>
+            <div class="flex justify-end gap-2 pt-2 border-t border-slate-100">
+                <button type="button" onclick="closeModal()" class="px-4 py-2 rounded-xl bg-slate-100 text-slate-700 font-bold">Hủy</button>
+                <button type="button" onclick="confirmResetAllData()" class="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold">Xác nhận xóa</button>
+            </div>
+        </div>
+    `);
+}
+
+function confirmResetAllData() {
+    if (!requireAdmin()) return;
+    computers = [];
+    repairs = [];
+    ioTransactions = [];
+    saveState();
+    closeModal();
+    renderCurrentPage();
+    showToast('Đã xóa toàn bộ dữ liệu thiết bị về 0!', 'info');
+}
+
 // ============================================================================
-// 8. KHỞI CHẠY ỨNG DỤNG
+// 8. ĐĂNG KÝ & ĐĂNG NHẬP TÀI KHOẢN THÀNH VIÊN
+// ============================================================================
+function openAuthModal(tab = 'login') {
+    const accountOptions = employees.map(emp =>
+        `<option value="${emp.id}">${emp.name} (${emp.role})</option>`
+    ).join('');
+
+    openModal('Tài khoản Hệ thống & Phân quyền', `
+        <div class="space-y-5 text-xs">
+            ${currentUser ? `
+                <div class="p-4 rounded-2xl bg-blue-50/70 border border-blue-200 flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                        <div class="font-extrabold text-slate-800 text-sm">Đang đăng nhập: ${currentUser.name}</div>
+                        <div class="text-slate-600 mt-0.5">Vai trò: <strong>${currentUser.role}</strong> • Khu vực: <strong>${currentUser.region}</strong></div>
+                    </div>
+                    <button type="button" onclick="logoutUser()" class="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold shadow-xs">
+                        Đăng xuất
+                    </button>
+                </div>
+            ` : ''}
+
+            <div class="flex gap-2 p-1 rounded-xl bg-slate-100">
+                <button type="button" onclick="openAuthModal('login')" class="flex-1 py-2 rounded-lg font-bold transition-all ${tab === 'login' ? 'bg-white text-blue-600 shadow-2xs' : 'text-slate-600'}">
+                    🔑 Đăng nhập nhanh
+                </button>
+                <button type="button" onclick="openAuthModal('register')" class="flex-1 py-2 rounded-lg font-bold transition-all ${tab === 'register' ? 'bg-white text-blue-600 shadow-2xs' : 'text-slate-600'}">
+                    📝 Đăng ký tài khoản mới
+                </button>
+            </div>
+
+            ${tab === 'login' ? `
+                <form onsubmit="submitAuthLogin(event)" class="space-y-4">
+                    <div>
+                        <label class="block font-bold text-slate-700 mb-1.5">Chọn tài khoản đã đăng ký</label>
+                        <select id="auth-login-select" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white font-semibold">
+                            ${accountOptions}
+                        </select>
+                    </div>
+                    <div class="p-3 rounded-xl bg-slate-50 border border-slate-200 text-slate-600 leading-relaxed">
+                        • Tài khoản <strong>Quản trị viên</strong> (như Bắc IT, Bình IT): Được phép nhập máy lỗi, chỉnh sửa thông tin và cập nhật trạng thái.<br>
+                        • Tài khoản <strong>Thành viên</strong>: Chỉ xem số liệu thống kê, không thể chỉnh sửa dữ liệu.
+                    </div>
+                    <div class="flex justify-end gap-2 pt-2 border-t border-slate-100">
+                        <button type="button" onclick="closeModal()" class="px-4 py-2 rounded-xl bg-slate-100 text-slate-700 font-bold">Đóng</button>
+                        <button type="submit" class="px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold">Đăng nhập</button>
+                    </div>
+                </form>
+            ` : `
+                <form onsubmit="submitAuthRegister(event)" class="space-y-3.5">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                        <div>
+                            <label class="block font-bold text-slate-700 mb-1">Họ và tên *</label>
+                            <input id="reg-name" type="text" required placeholder="VD: Nguyễn Văn A" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200">
+                        </div>
+                        <div>
+                            <label class="block font-bold text-slate-700 mb-1">Tên đăng nhập *</label>
+                            <input id="reg-username" type="text" required placeholder="VD: nguyenvana" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200">
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                        <div>
+                            <label class="block font-bold text-slate-700 mb-1">Vai trò phân quyền *</label>
+                            <select id="reg-role" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white">
+                                <option value="Thành viên">Thành viên (Chỉ xem số liệu)</option>
+                                <option value="Quản trị viên">Quản trị viên (Toàn quyền nhập & sửa)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block font-bold text-slate-700 mb-1">Khu vực làm việc *</label>
+                            <select id="reg-region" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white">
+                                <option value="Miền Bắc">Miền Bắc</option>
+                                <option value="Miền Trung">Miền Trung</option>
+                                <option value="Miền Nam">Miền Nam</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                        <div>
+                            <label class="block font-bold text-slate-700 mb-1">Bộ phận</label>
+                            <input id="reg-dept" type="text" placeholder="VD: Kỹ thuật / Kho / Kinh doanh" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200">
+                        </div>
+                        <div>
+                            <label class="block font-bold text-slate-700 mb-1">Số điện thoại</label>
+                            <input id="reg-phone" type="text" placeholder="VD: 0901234567" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block font-bold text-slate-700 mb-1">Email</label>
+                        <input id="reg-email" type="email" placeholder="VD: thanhvien@congty.vn" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200">
+                    </div>
+                    <div class="flex justify-end gap-2 pt-2 border-t border-slate-100">
+                        <button type="button" onclick="closeModal()" class="px-4 py-2 rounded-xl bg-slate-100 text-slate-700 font-bold">Hủy</button>
+                        <button type="submit" class="px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold">Hoàn tất đăng ký</button>
+                    </div>
+                </form>
+            `}
+        </div>
+    `);
+}
+
+function submitAuthLogin(e) {
+    e.preventDefault();
+    const selectedId = document.getElementById('auth-login-select').value;
+    const found = employees.find(emp => emp.id === selectedId);
+    if (!found) return;
+    currentUser = found;
+    saveState();
+    updateHeaderUserUI();
+    closeModal();
+    renderCurrentPage();
+    showToast(`Xin chào ${found.name} (${found.role})!`);
+}
+
+function submitAuthRegister(e) {
+    e.preventDefault();
+    const name = document.getElementById('reg-name').value.trim();
+    const username = document.getElementById('reg-username').value.trim();
+    const role = document.getElementById('reg-role').value;
+    const region = document.getElementById('reg-region').value;
+    const dept = document.getElementById('reg-dept').value.trim() || 'Thành viên';
+    const phone = document.getElementById('reg-phone').value.trim() || '-';
+    const email = document.getElementById('reg-email').value.trim() || '-';
+
+    if (employees.some(emp => (emp.username || '').toLowerCase() === username.toLowerCase())) {
+        showToast('Tên đăng nhập đã tồn tại, vui lòng chọn tên khác!', 'warning');
+        return;
+    }
+
+    const newMember = {
+        id: `TV${String(employees.length + 1).padStart(3, '0')}`,
+        name,
+        username,
+        dept,
+        role,
+        email,
+        phone,
+        region,
+        status: 'Đang hoạt động',
+        registeredAt: new Date().toISOString().slice(0, 10)
+    };
+
+    employees.push(newMember);
+    currentUser = newMember;
+    saveState();
+    updateHeaderUserUI();
+    closeModal();
+    renderCurrentPage();
+    showToast(`Đăng ký thành công tài khoản ${name} (${role})!`);
+}
+
+function logoutUser() {
+    currentUser = null;
+    saveState();
+    updateHeaderUserUI();
+    closeModal();
+    renderCurrentPage();
+    showToast('Đã đăng xuất tài khoản (Chế độ chỉ xem).', 'info');
+}
+
+function openManageAccountsModal() {
+    const adminMode = isAdmin();
+    openModal('Quản lý & Xóa Tài khoản Thành viên Đã Đăng ký', `
+        <div class="space-y-4 text-xs">
+            ${!adminMode ? `
+                <div class="p-3.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 font-semibold">
+                    🔒 Bạn đang ở chế độ Chỉ xem. Chỉ tài khoản <strong>Quản trị viên</strong> mới có quyền chỉnh sửa hoặc xóa tài khoản thành viên.
+                </div>
+            ` : `
+                <div class="p-3.5 rounded-xl bg-blue-50/70 border border-blue-200 text-blue-800 font-medium">
+                    🛡️ Quyền <strong>Quản trị viên</strong>: Bạn có thể chỉnh sửa thông tin, thay đổi vai trò hoặc xóa các tài khoản thành viên bên dưới.
+                </div>
+            `}
+
+            <div class="space-y-2.5 max-h-[55vh] overflow-y-auto pr-1">
+                ${employees.map(emp => {
+                    const isSelf = currentUser && currentUser.id === emp.id;
+                    return `
+                        <div class="p-4 rounded-2xl border border-slate-200 bg-slate-50/60 space-y-3">
+                            <div class="flex flex-wrap items-center justify-between gap-2">
+                                <div class="flex items-center gap-2">
+                                    <span class="px-2 py-0.5 rounded-md bg-blue-100 text-blue-700 font-bold">${emp.id}</span>
+                                    <span class="font-extrabold text-slate-800 text-sm">${emp.name}</span>
+                                    <span class="text-slate-400 font-mono">(@${emp.username || '-'})</span>
+                                    ${isSelf ? '<span class="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 text-[10px] font-bold">Đang đăng nhập</span>' : ''}
+                                </div>
+                                <span class="px-2.5 py-0.5 rounded-full font-bold ${emp.role === 'Quản trị viên' ? 'bg-indigo-100 text-indigo-700' : 'bg-slate-200 text-slate-700'}">
+                                    ${emp.role}
+                                </span>
+                            </div>
+
+                            ${adminMode ? `
+                                <div class="grid grid-cols-1 sm:grid-cols-4 gap-2 pt-1">
+                                    <input id="edit-emp-name-${emp.id}" type="text" value="${emp.name.replace(/"/g, '&quot;')}" placeholder="Họ tên"
+                                        class="px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white font-semibold text-slate-800">
+                                    <select id="edit-emp-role-${emp.id}" class="px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white font-semibold text-slate-800">
+                                        <option value="Thành viên" ${emp.role === 'Thành viên' ? 'selected' : ''}>Thành viên</option>
+                                        <option value="Quản trị viên" ${emp.role === 'Quản trị viên' ? 'selected' : ''}>Quản trị viên</option>
+                                    </select>
+                                    <select id="edit-emp-region-${emp.id}" class="px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white font-semibold text-slate-800">
+                                        <option value="Miền Bắc" ${emp.region === 'Miền Bắc' ? 'selected' : ''}>Miền Bắc</option>
+                                        <option value="Miền Trung" ${emp.region === 'Miền Trung' ? 'selected' : ''}>Miền Trung</option>
+                                        <option value="Miền Nam" ${emp.region === 'Miền Nam' ? 'selected' : ''}>Miền Nam</option>
+                                    </select>
+                                    <input id="edit-emp-phone-${emp.id}" type="text" value="${(emp.phone || '').replace(/"/g, '&quot;')}" placeholder="Số điện thoại"
+                                        class="px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white text-slate-700">
+                                </div>
+                                <div class="flex justify-end gap-2 pt-1">
+                                    <button type="button" onclick="saveAccountEdit('${emp.id}')" class="px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold transition-colors">
+                                        💾 Lưu sửa
+                                    </button>
+                                    ${!isSelf ? `
+                                        <button type="button" onclick="deleteAccountMember('${emp.id}')" class="px-3 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-700 text-white font-bold transition-colors">
+                                            🗑️ Xóa tài khoản
+                                        </button>
+                                    ` : `
+                                        <span class="px-3 py-1.5 rounded-lg bg-slate-200 text-slate-500 font-semibold">Không thể tự xóa</span>
+                                    `}
+                                </div>
+                            ` : `
+                                <div class="text-slate-600">
+                                    Khu vực: <strong>${emp.region}</strong> • Bộ phận: <strong>${emp.dept || '-'}</strong> • SĐT: <strong>${emp.phone || '-'}</strong>
+                                </div>
+                            `}
+                        </div>
+                    `;
+                }).join('')}
+            </div>
+
+            <div class="flex justify-end pt-2 border-t border-slate-100">
+                <button type="button" onclick="closeModal()" class="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold">Đóng</button>
+            </div>
+        </div>
+    `);
+}
+
+function saveAccountEdit(empId) {
+    if (!requireAdmin()) return;
+    const emp = employees.find(e => e.id === empId);
+    if (!emp) return;
+
+    const newName = document.getElementById(`edit-emp-name-${empId}`).value.trim();
+    const newRole = document.getElementById(`edit-emp-role-${empId}`).value;
+    const newRegion = document.getElementById(`edit-emp-region-${empId}`).value;
+    const newPhone = document.getElementById(`edit-emp-phone-${empId}`).value.trim();
+
+    if (!newName) {
+        showToast('Họ tên thành viên không được để trống!', 'warning');
+        return;
+    }
+
+    emp.name = newName;
+    emp.role = newRole;
+    emp.region = newRegion;
+    emp.phone = newPhone || '-';
+
+    if (currentUser && currentUser.id === emp.id) {
+        currentUser = emp;
+        updateHeaderUserUI();
+    }
+
+    saveState();
+    renderCurrentPage();
+    openManageAccountsModal();
+    showToast(`Đã cập nhật thông tin tài khoản ${emp.name}!`);
+}
+
+function deleteAccountMember(empId) {
+    if (!requireAdmin()) return;
+    if (currentUser && currentUser.id === empId) {
+        showToast('Không thể xóa tài khoản đang đăng nhập!', 'warning');
+        return;
+    }
+    const target = employees.find(e => e.id === empId);
+    if (!target) return;
+
+    employees = employees.filter(e => e.id !== empId);
+    saveState();
+    renderCurrentPage();
+    openManageAccountsModal();
+    showToast(`Đã xóa tài khoản ${target.name} (${target.id})!`, 'info');
+}
+
+// ============================================================================
+// 9. KHỞI CHẠY ỨNG DỤNG
 // ============================================================================
 window.onload = function () {
     loadState();
