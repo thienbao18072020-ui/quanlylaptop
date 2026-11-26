@@ -46,7 +46,7 @@
                     IT
                 </div>
                 <div>
-                    <div class="font-bold text-slate-900 leading-tight text-sm">VN-TECH IT</div>
+                    <div class="font-bold text-slate-900 leading-tight text-sm">HỆ THỐNG IT</div>
                     <div class="text-[11px] text-slate-500 font-medium">Quản lý Tài sản 3 Miền</div>
                 </div>
             </div>
@@ -901,7 +901,16 @@ function renderQuickSearchResults() {
 // 5. QUẢN LÝ MÁY TÍNH & CHI TIẾT THIẾT BỊ
 // ============================================================================
 function renderComputers(container) {
-    const filtered = computers.filter(c => {
+    const managedStatuses = ['Đang sửa', 'Sửa xong', 'Đã gửi trả chi nhánh', 'Gửi nhà cung cấp', 'Thanh lý'];
+    const managedList = computers.filter(c => managedStatuses.includes(c.status));
+
+    const countRepairing = managedList.filter(c => c.status === 'Đang sửa').length;
+    const countDone = managedList.filter(c => c.status === 'Sửa xong').length;
+    const countReturned = managedList.filter(c => c.status === 'Đã gửi trả chi nhánh').length;
+    const countVendor = managedList.filter(c => c.status === 'Gửi nhà cung cấp').length;
+    const countDisposed = managedList.filter(c => c.status === 'Thanh lý').length;
+
+    const filtered = managedList.filter(c => {
         const q = computerFilters.search.toLowerCase();
         const matchQ = !q || c.id.toLowerCase().includes(q) || (c.name || '').toLowerCase().includes(q) || (c.user || '').toLowerCase().includes(q);
         const matchR = computerFilters.region === 'ALL' || c.region === computerFilters.region;
@@ -913,11 +922,37 @@ function renderComputers(container) {
         <div class="flex flex-wrap items-center justify-between gap-3">
             <div>
                 <h2 class="text-lg font-bold text-slate-800">Danh sách Quản lý Máy tính</h2>
-                <p class="text-xs text-slate-500">Quản lý toàn bộ mã số máy, khách hàng và trạng thái 3 miền</p>
+                <p class="text-xs text-slate-500">Quản lý tập trung các máy Đang sửa, Sửa xong, Gửi trả chi nhánh, Gửi nhà cung cấp và Thanh lý 3 miền</p>
             </div>
-            <div class="flex gap-2">
-                <button onclick="openNewRepairModal()" class="px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold shadow-xs">⚠️ NHẬP MÁY LỖI</button>
-            </div>
+        </div>
+
+        <!-- THẺ LỌC NHANH 5 NHÓM TRẠNG THÁI -->
+        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 text-xs">
+            <button onclick="computerFilters.status = computerFilters.status==='Đang sửa' ? 'ALL' : 'Đang sửa'; renderCurrentPage()"
+                class="flex items-center justify-between p-3 rounded-xl border transition-all ${computerFilters.status==='Đang sửa' ? 'ring-2 ring-amber-500 bg-amber-50 border-amber-300' : 'bg-amber-50/60 border-amber-200 hover:bg-amber-50'}">
+                <span class="font-semibold text-amber-800">🟡 Đang sửa</span>
+                <strong class="text-base text-amber-900">${countRepairing}</strong>
+            </button>
+            <button onclick="computerFilters.status = computerFilters.status==='Sửa xong' ? 'ALL' : 'Sửa xong'; renderCurrentPage()"
+                class="flex items-center justify-between p-3 rounded-xl border transition-all ${computerFilters.status==='Sửa xong' ? 'ring-2 ring-emerald-500 bg-emerald-50 border-emerald-300' : 'bg-emerald-50/60 border-emerald-200 hover:bg-emerald-50'}">
+                <span class="font-semibold text-emerald-800">🟢 Sửa xong</span>
+                <strong class="text-base text-emerald-900">${countDone}</strong>
+            </button>
+            <button onclick="computerFilters.status = computerFilters.status==='Đã gửi trả chi nhánh' ? 'ALL' : 'Đã gửi trả chi nhánh'; renderCurrentPage()"
+                class="flex items-center justify-between p-3 rounded-xl border transition-all ${computerFilters.status==='Đã gửi trả chi nhánh' ? 'ring-2 ring-blue-500 bg-blue-50 border-blue-300' : 'bg-blue-50/60 border-blue-200 hover:bg-blue-50'}">
+                <span class="font-semibold text-blue-800">🔵 Gửi trả chi nhánh</span>
+                <strong class="text-base text-blue-900">${countReturned}</strong>
+            </button>
+            <button onclick="computerFilters.status = computerFilters.status==='Gửi nhà cung cấp' ? 'ALL' : 'Gửi nhà cung cấp'; renderCurrentPage()"
+                class="flex items-center justify-between p-3 rounded-xl border transition-all ${computerFilters.status==='Gửi nhà cung cấp' ? 'ring-2 ring-purple-500 bg-purple-50 border-purple-300' : 'bg-purple-50/60 border-purple-200 hover:bg-purple-50'}">
+                <span class="font-semibold text-purple-800">🟣 Gửi nhà cung cấp</span>
+                <strong class="text-base text-purple-900">${countVendor}</strong>
+            </button>
+            <button onclick="computerFilters.status = computerFilters.status==='Thanh lý' ? 'ALL' : 'Thanh lý'; renderCurrentPage()"
+                class="flex items-center justify-between p-3 rounded-xl border transition-all ${computerFilters.status==='Thanh lý' ? 'ring-2 ring-slate-600 bg-slate-200 border-slate-400' : 'bg-slate-100 border-slate-200 hover:bg-slate-200/70'}">
+                <span class="font-semibold text-slate-800">⚫ Thanh lý</span>
+                <strong class="text-base text-slate-900">${countDisposed}</strong>
+            </button>
         </div>
 
         <div class="bg-white rounded-2xl border border-slate-200 p-4 shadow-xs grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
@@ -931,13 +966,11 @@ function renderComputers(container) {
                 <option value="Miền Nam" ${computerFilters.region==='Miền Nam'?'selected':''}>Miền Nam</option>
             </select>
             <select onchange="computerFilters.status=this.value; renderCurrentPage()" class="px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white">
-                <option value="ALL" ${computerFilters.status==='ALL'?'selected':''}>Tất cả tình trạng</option>
-                <option value="Sửa xong" ${computerFilters.status==='Sửa xong'?'selected':''}>Sửa xong</option>
+                <option value="ALL" ${computerFilters.status==='ALL'?'selected':''}>Tất cả 5 tình trạng quản lý</option>
                 <option value="Đang sửa" ${computerFilters.status==='Đang sửa'?'selected':''}>Đang sửa</option>
-                <option value="Chờ xử lý" ${computerFilters.status==='Chờ xử lý'?'selected':''}>Chờ xử lý</option>
+                <option value="Sửa xong" ${computerFilters.status==='Sửa xong'?'selected':''}>Sửa xong</option>
+                <option value="Đã gửi trả chi nhánh" ${computerFilters.status==='Đã gửi trả chi nhánh'?'selected':''}>Gửi trả chi nhánh</option>
                 <option value="Gửi nhà cung cấp" ${computerFilters.status==='Gửi nhà cung cấp'?'selected':''}>Gửi nhà cung cấp</option>
-                <option value="Đã gửi trả chi nhánh" ${computerFilters.status==='Đã gửi trả chi nhánh'?'selected':''}>Đã gửi trả chi nhánh</option>
-                <option value="Hỏng" ${computerFilters.status==='Hỏng'?'selected':''}>Hỏng</option>
                 <option value="Thanh lý" ${computerFilters.status==='Thanh lý'?'selected':''}>Thanh lý</option>
             </select>
         </div>
@@ -958,7 +991,7 @@ function renderComputers(container) {
                     </thead>
                     <tbody class="divide-y divide-slate-100">
                         ${filtered.length === 0
-                            ? `<tr><td colspan="7" class="py-8 text-center text-slate-400">Chưa có dữ liệu máy tính nào. Hãy nhập máy mới hoặc báo máy lỗi.</td></tr>`
+                            ? `<tr><td colspan="7" class="py-8 text-center text-slate-400">Chưa có thiết bị nào thuộc nhóm Đang sửa, Sửa xong, Gửi trả chi nhánh, Gửi nhà cung cấp hoặc Thanh lý.</td></tr>`
                             : filtered.map((c, idx) => `
                                 <tr onclick="openComputerDetail('${c.id}')" class="hover:bg-blue-50/40 cursor-pointer transition-colors">
                                     <td class="py-3.5 px-4 text-slate-500">${idx + 1}</td>
@@ -975,7 +1008,7 @@ function renderComputers(container) {
                 </table>
             </div>
             <div class="px-4 py-3 bg-slate-50/70 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
-                <span>Hiển thị <strong>${filtered.length}</strong> / ${computers.length} thiết bị</span>
+                <span>Hiển thị <strong>${filtered.length}</strong> / ${managedList.length} thiết bị</span>
                 <span>Mẹo: Nhấn vào bất kỳ hàng nào để thao tác nghiệp vụ</span>
             </div>
         </div>
@@ -1403,12 +1436,9 @@ function renderRepairs(container) {
     container.innerHTML = `
         <div class="flex flex-wrap items-center justify-between gap-3">
             <div>
-                <h2 class="text-lg font-bold text-slate-800">Danh sách Máy đang sửa & Bảo hành</h2>
+                <h2 class="text-lg font-bold text-slate-800">Danh sách máy đang nhận và sửa</h2>
                 <p class="text-xs text-slate-500">Theo dõi tiến độ sửa chữa, chi phí dự kiến và tình trạng lỗi</p>
             </div>
-            <button onclick="openNewRepairModal()" class="px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold shadow-xs">
-                + TẠO PHIẾU SỬA CHỮA
-            </button>
         </div>
 
         <div class="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-xs">
@@ -1416,10 +1446,9 @@ function renderRepairs(container) {
                 <table class="w-full text-left border-collapse text-xs">
                     <thead>
                         <tr class="bg-slate-50 border-b border-slate-200 text-slate-600 font-bold uppercase">
-                            <th class="py-3.5 px-4">MÃ PHIẾU</th>
                             <th class="py-3.5 px-4">MÃ SỐ MÁY</th>
                             <th class="py-3.5 px-4">KHÁCH HÀNG</th>
-                            <th class="py-3.5 px-4">MIỀN</th>
+                            <th class="py-3.5 px-4">CHI NHÁNH</th>
                             <th class="py-3.5 px-4">TÌNH TRẠNG LỖI</th>
                             <th class="py-3.5 px-4">CHI PHÍ DỰ KIẾN</th>
                             <th class="py-3.5 px-4">TRẠNG THÁI</th>
@@ -1427,10 +1456,9 @@ function renderRepairs(container) {
                     </thead>
                     <tbody class="divide-y divide-slate-100">
                         ${repairs.length === 0
-                            ? `<tr><td colspan="7" class="py-8 text-center text-slate-400">Chưa có phiếu sửa chữa nào.</td></tr>`
+                            ? `<tr><td colspan="6" class="py-8 text-center text-slate-400">Chưa có danh sách máy đang sửa nào.</td></tr>`
                             : repairs.map(r => `
                                 <tr onclick="openComputerDetail('${r.computerId}')" class="hover:bg-slate-50 cursor-pointer">
-                                    <td class="py-3.5 px-4 font-bold text-slate-700">${r.id}</td>
                                     <td class="py-3.5 px-4 font-bold text-blue-600">${r.computerId}</td>
                                     <td class="py-3.5 px-4">${r.customer || '-'}</td>
                                     <td class="py-3.5 px-4">${r.region}</td>
