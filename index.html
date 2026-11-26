@@ -1,0 +1,1761 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hệ Thống Quản Lý Máy Tính 3 Miền - IT Asset Management</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Google Fonts: Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc;
+            color: #0f172a;
+        }
+        /* Custom scrollbar */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #f1f5f9; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+        /* Print styles */
+        @media print {
+            aside, header, .no-print { display: none !important; }
+            main { margin: 0 !important; padding: 0 !important; width: 100% !important; }
+        }
+    </style>
+</head>
+<body class="antialiased selection:bg-blue-100 selection:text-blue-900">
+
+    <!-- Toast Notification Container -->
+    <div id="toast-container" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+    <!-- Mobile Sidebar Overlay -->
+    <div id="sidebar-overlay" onclick="toggleSidebar()" class="fixed inset-0 bg-slate-900/50 z-30 hidden lg:hidden backdrop-blur-sm transition-opacity"></div>
+
+    <div class="flex h-screen overflow-hidden">
+        <!-- SIDEBAR -->
+        <aside id="sidebar" class="fixed inset-y-0 left-0 z-40 w-64 bg-white border-r border-slate-200 flex flex-col transform -translate-x-full lg:translate-x-0 lg:static transition-transform duration-200 ease-in-out">
+            <!-- Brand Logo -->
+            <div class="h-16 flex items-center gap-3 px-6 border-b border-slate-200 shrink-0">
+                <div class="w-9 h-9 rounded-xl bg-blue-600 text-white flex items-center justify-center font-bold text-lg shadow-sm">
+                    IT
+                </div>
+                <div>
+                    <div class="font-bold text-slate-900 leading-tight text-sm">VN-TECH IT</div>
+                    <div class="text-[11px] text-slate-500 font-medium">Quản lý Tài sản 3 Miền</div>
+                </div>
+            </div>
+
+            <!-- Navigation Menu -->
+            <nav id="sidebar-nav" class="flex-1 overflow-y-auto p-3 space-y-1 text-sm font-medium">
+                <button onclick="navigate('dashboard')" data-page="dashboard" class="nav-item w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl transition-colors text-left">
+                    <span class="text-base">🏠</span> <span>TRANG CHỦ</span>
+                </button>
+                <button onclick="navigate('computers')" data-page="computers" class="nav-item w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl transition-colors text-left">
+                    <span class="text-base">💻</span> <span>QUẢN LÝ MÁY TÍNH</span>
+                </button>
+                <button onclick="navigate('repairs')" data-page="repairs" class="nav-item w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl transition-colors text-left">
+                    <span class="text-base">🔧</span> <span>MÁY ĐANG SỬA</span>
+                </button>
+                <button onclick="navigate('regions')" data-page="regions" class="nav-item w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl transition-colors text-left">
+                    <span class="text-base">🏢</span> <span>QUẢN LÝ 3 MIỀN</span>
+                </button>
+                <button onclick="navigate('employees')" data-page="employees" class="nav-item w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl transition-colors text-left">
+                    <span class="text-base">👥</span> <span>THÀNH VIÊN</span>
+                </button>
+                <button onclick="navigate('reports')" data-page="reports" class="nav-item w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl transition-colors text-left">
+                    <span class="text-base">📊</span> <span>BÁO CÁO</span>
+                </button>
+                <button onclick="navigate('settings')" data-page="settings" class="nav-item w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl transition-colors text-left">
+                    <span class="text-base">⚙️</span> <span>CÀI ĐẶT</span>
+                </button>
+            </nav>
+
+            <!-- Footer Info -->
+            <div class="p-4 border-t border-slate-100 text-xs text-slate-400">
+                Phiên bản 2.6 • Đồng bộ 3 miền
+            </div>
+        </aside>
+
+        <!-- MAIN WORKSPACE -->
+        <div class="flex-1 flex flex-col min-w-0 overflow-hidden">
+            <!-- TOP HEADER -->
+            <header class="h-16 bg-white border-b border-slate-200 px-4 lg:px-8 flex items-center justify-between shrink-0">
+                <div class="flex items-center gap-3">
+                    <button onclick="toggleSidebar()" class="lg:hidden p-2 rounded-xl hover:bg-slate-100 text-slate-600">
+                        ☰
+                    </button>
+                    <h1 class="text-sm sm:text-base lg:text-lg font-bold text-slate-800 tracking-tight truncate">
+                        HỆ THỐNG QUẢN LÝ MÁY TÍNH 3 MIỀN
+                    </h1>
+                </div>
+
+                <div class="flex items-center gap-3 sm:gap-4">
+                    <div class="text-right hidden sm:block">
+                        <div id="header-user-name" class="text-xs font-bold text-slate-800">Bắc IT</div>
+                        <div id="header-user-role" class="text-[11px] text-slate-500">Quản trị viên Hạ tầng</div>
+                    </div>
+                    <div id="header-user-avatar" class="w-9 h-9 rounded-full bg-blue-100 text-blue-700 font-bold text-xs flex items-center justify-center">
+                        IT
+                    </div>
+                    <button onclick="openAuthModal('register')" class="px-3 py-1.5 text-xs font-semibold text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-xl transition-colors">
+                        Đăng ký / Đăng nhập
+                    </button>
+                </div>
+            </header>
+
+            <!-- MAIN CONTENT AREA -->
+            <main id="main-content" class="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 space-y-6"></main>
+        </div>
+    </div>
+
+    <!-- MODAL OVERLAY -->
+    <div id="modal-backdrop" onclick="if(event.target===this) closeModal()" class="fixed inset-0 bg-slate-900/50 z-50 hidden items-center justify-center p-4 backdrop-blur-xs">
+        <div class="bg-white rounded-2xl border border-slate-200 shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden">
+            <div class="px-6 py-4 border-b border-slate-200 flex items-center justify-between bg-slate-50/60">
+                <h3 id="modal-title" class="font-bold text-slate-800 text-base">Chi tiết</h3>
+                <button onclick="closeModal()" class="w-8 h-8 rounded-lg hover:bg-slate-200/70 text-slate-500 font-bold flex items-center justify-center">✕</button>
+            </div>
+            <div id="modal-body" class="p-6 overflow-y-auto"></div>
+        </div>
+    </div>
+
+<script>
+// ============================================================================
+// 1. DỮ LIỆU & TRẠNG THÁI HỆ THỐNG
+// ============================================================================
+const STORAGE_KEY = 'vntech_it_3mien_v26';
+
+const REGION_INFO = {
+    'Miền Bắc': {
+        branches: ['Lô D3, KCN Đại Đồng - Hoàn Sơn, Xã Đại Đồng, Tỉnh Bắc Ninh'],
+        itManager: 'Bắc IT (0945633345), Bình IT (0939348848)'
+    },
+    'Miền Trung': {
+        branches: ['Thôn Phong Nam, Quốc Lộ 1A, Phường Hoà Xuân, TP. Đà Nẵng'],
+        itManager: 'Bắc IT (0945633345), Bình IT (0939348848)'
+    },
+    'Miền Nam': {
+        branches: ['18/49 Quốc Lộ 1A, Khu Phố 1, Phường Bình Hưng Hoà, TP.HCM'],
+        itManager: 'Bắc IT (0945633345), Bình IT (0939348848)'
+    }
+};
+
+let computers = [];
+let repairs = [];
+let ioTransactions = [];
+let employees = [
+    { id: 'TV001', name: 'Bắc IT', username: 'bacit', dept: 'Hạ tầng IT', role: 'Quản trị viên', email: 'bac.it@vntech.vn', phone: '0945633345', region: 'Miền Bắc', status: 'Đang hoạt động', registeredAt: '2026-01-01' },
+    { id: 'TV002', name: 'Bình IT', username: 'binhit', dept: 'Kỹ thuật IT', role: 'Chuyên viên IT', email: 'binh.it@vntech.vn', phone: '0939348848', region: 'Miền Nam', status: 'Đang hoạt động', registeredAt: '2026-01-01' }
+];
+let currentUser = employees[0];
+
+let currentPage = 'dashboard';
+let computerFilters = { search: '', region: 'ALL', status: 'ALL' };
+let quickSearchQuery = '';
+let quickStatusFilter = 'ALL';
+let activeCharts = [];
+
+function loadState() {
+    try {
+        const saved = localStorage.getItem(STORAGE_KEY);
+        if (saved) {
+            const parsed = JSON.parse(saved);
+            if (Array.isArray(parsed.computers)) computers = parsed.computers;
+            if (Array.isArray(parsed.repairs)) repairs = parsed.repairs;
+            if (Array.isArray(parsed.ioTransactions)) ioTransactions = parsed.ioTransactions;
+            if (Array.isArray(parsed.employees) && parsed.employees.length > 0) employees = parsed.employees;
+            if (parsed.currentUser) currentUser = parsed.currentUser;
+        }
+    } catch (e) {
+        console.warn('Không thể tải dữ liệu lưu trữ:', e);
+    }
+    updateHeaderUserUI();
+}
+
+function saveState() {
+    try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify({ computers, repairs, ioTransactions, employees, currentUser }));
+    } catch (e) {
+        console.warn('Không thể lưu dữ liệu:', e);
+    }
+}
+
+function updateHeaderUserUI() {
+    const nameEl = document.getElementById('header-user-name');
+    const roleEl = document.getElementById('header-user-role');
+    const avatarEl = document.getElementById('header-user-avatar');
+    if (nameEl && currentUser) nameEl.textContent = currentUser.name;
+    if (roleEl && currentUser) roleEl.textContent = `${currentUser.role} • ${currentUser.region}`;
+    if (avatarEl && currentUser) {
+        const parts = currentUser.name.trim().split(' ');
+        avatarEl.textContent = parts[parts.length - 1].slice(0, 2).toUpperCase();
+    }
+}
+// ... existing code ... -->
+function renderEmployees(container) {
+    container.innerHTML = `
+        <div class="flex flex-wrap items-center justify-between gap-3">
+            <div>
+                <h2 class="text-lg font-bold text-slate-800">Danh sách Thành viên Đã Đăng ký</h2>
+                <p class="text-xs text-slate-500">Tự động cập nhật danh sách các thành viên đăng ký tài khoản trong hệ thống (${employees.length} thành viên)</p>
+            </div>
+            <button onclick="openAuthModal('register')" class="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-xs transition-colors">
+                + ĐĂNG KÝ TÀI KHOẢN MỚI
+            </button>
+        </div>
+
+        <div class="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-xs">
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse text-xs">
+                    <thead>
+                        <tr class="bg-slate-50 border-b border-slate-200 text-slate-600 font-bold uppercase tracking-wider">
+                            <th class="py-3.5 px-4">MÃ TV</th>
+                            <th class="py-3.5 px-4">HỌ TÊN THÀNH VIÊN</th>
+                            <th class="py-3.5 px-4">TÊN ĐĂNG NHẬP</th>
+                            <th class="py-3.5 px-4">VAI TRÒ / BỘ PHẬN</th>
+                            <th class="py-3.5 px-4">MIỀN</th>
+                            <th class="py-3.5 px-4">LIÊN HỆ</th>
+                            <th class="py-3.5 px-4">NGÀY ĐĂNG KÝ</th>
+                            <th class="py-3.5 px-4">TRẠNG THÁI</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100">
+                        ${employees.map(emp => `
+                            <tr class="hover:bg-slate-50/70">
+                                <td class="py-3.5 px-4 font-bold text-blue-600">${emp.id}</td>
+                                <td class="py-3.5 px-4 font-semibold text-slate-800">
+                                    ${emp.name}
+                                    ${currentUser && currentUser.id === emp.id ? '<span class="ml-1.5 px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 text-[10px] font-bold">Đang dùng</span>' : ''}
+                                </td>
+                                <td class="py-3.5 px-4 font-mono text-slate-600">${emp.username || '-'}</td>
+                                <td class="py-3.5 px-4">${emp.role} <span class="text-slate-400">(${emp.dept})</span></td>
+                                <td class="py-3.5 px-4"><span class="px-2.5 py-1 rounded-lg bg-slate-100 text-slate-700 font-semibold">${emp.region}</span></td>
+                                <td class="py-3.5 px-4 text-slate-500">${emp.phone || '-'} • ${emp.email || '-'}</td>
+                                <td class="py-3.5 px-4 text-slate-500">${emp.registeredAt || '-'}</td>
+                                <td class="py-3.5 px-4"><span class="px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 font-semibold">${emp.status || 'Đang hoạt động'}</span></td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    `;
+}
+
+function openAuthModal(tab = 'register') {
+    const isReg = tab === 'register';
+    openModal(isReg ? 'Đăng ký Tài khoản Thành viên' : 'Đăng nhập Hệ thống', `
+        <div class="space-y-4 text-xs">
+            <div class="flex gap-2 p-1 rounded-xl bg-slate-100">
+                <button type="button" onclick="openAuthModal('register')" class="flex-1 py-2 rounded-lg font-bold transition-colors ${isReg ? 'bg-white text-blue-600 shadow-xs' : 'text-slate-600'}">
+                    Đăng ký tài khoản
+                </button>
+                <button type="button" onclick="openAuthModal('login')" class="flex-1 py-2 rounded-lg font-bold transition-colors ${!isReg ? 'bg-white text-blue-600 shadow-xs' : 'text-slate-600'}">
+                    Đăng nhập
+                </button>
+            </div>
+
+            ${isReg ? `
+                <form onsubmit="submitRegisterMember(event)" class="space-y-3.5">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                            <label class="block font-bold text-slate-700 mb-1">Họ và tên thành viên *</label>
+                            <input id="reg-name" type="text" required placeholder="VD: Nguyễn Văn A"
+                                class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        </div>
+                        <div>
+                            <label class="block font-bold text-slate-700 mb-1">Tên đăng nhập *</label>
+                            <input id="reg-username" type="text" required placeholder="VD: nguyenvana"
+                                class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                            <label class="block font-bold text-slate-700 mb-1">Số điện thoại *</label>
+                            <input id="reg-phone" type="text" inputmode="numeric" required oninput="this.value=this.value.replace(/[^0-9]/g,'')" placeholder="VD: 0901234567"
+                                class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        </div>
+                        <div>
+                            <label class="block font-bold text-slate-700 mb-1">Email</label>
+                            <input id="reg-email" type="email" placeholder="VD: thanhvien@vntech.vn"
+                                class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        <div>
+                            <label class="block font-bold text-slate-700 mb-1">Khu vực (Miền)</label>
+                            <select id="reg-region" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white">
+                                <option value="Miền Bắc">Miền Bắc</option>
+                                <option value="Miền Trung">Miền Trung</option>
+                                <option value="Miền Nam">Miền Nam</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block font-bold text-slate-700 mb-1">Bộ phận</label>
+                            <input id="reg-dept" type="text" value="Kỹ thuật IT"
+                                class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200">
+                        </div>
+                        <div>
+                            <label class="block font-bold text-slate-700 mb-1">Chức vụ / Vai trò</label>
+                            <input id="reg-role" type="text" value="Thành viên"
+                                class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200">
+                        </div>
+                    </div>
+                    <div class="flex justify-end gap-2 pt-3 border-t border-slate-100">
+                        <button type="button" onclick="closeModal()" class="px-4 py-2 rounded-xl bg-slate-100 text-slate-700 font-bold">Hủy</button>
+                        <button type="submit" class="px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold shadow-xs">Hoàn tất Đăng ký</button>
+                    </div>
+                </form>
+            ` : `
+                <form onsubmit="submitLoginMember(event)" class="space-y-3.5">
+                    <div>
+                        <label class="block font-bold text-slate-700 mb-1">Chọn tài khoản thành viên đã đăng ký</label>
+                        <select id="login-member-id" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white">
+                            ${employees.map(m => `<option value="${m.id}" ${currentUser && currentUser.id === m.id ? 'selected' : ''}>${m.name} (@${m.username}) - ${m.region}</option>`).join('')}
+                        </select>
+                    </div>
+                    <div class="flex justify-end gap-2 pt-3 border-t border-slate-100">
+                        <button type="button" onclick="closeModal()" class="px-4 py-2 rounded-xl bg-slate-100 text-slate-700 font-bold">Hủy</button>
+                        <button type="submit" class="px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold shadow-xs">Đăng nhập</button>
+                    </div>
+                </form>
+            `}
+        </div>
+    `);
+}
+
+function submitRegisterMember(e) {
+    e.preventDefault();
+    const name = document.getElementById('reg-name').value.trim();
+    const username = document.getElementById('reg-username').value.trim().toLowerCase();
+    const phone = document.getElementById('reg-phone').value.trim();
+    const email = document.getElementById('reg-email').value.trim() || '-';
+    const region = document.getElementById('reg-region').value;
+    const dept = document.getElementById('reg-dept').value.trim() || 'Thành viên';
+    const role = document.getElementById('reg-role').value.trim() || 'Thành viên';
+
+    if (employees.some(emp => (emp.username || '').toLowerCase() === username)) {
+        showToast(`Tên đăng nhập "${username}" đã tồn tại!`, 'warning');
+        return;
+    }
+
+    const nextNum = String(employees.length + 1).padStart(3, '0');
+    const newMember = {
+        id: `TV${nextNum}`,
+        name,
+        username,
+        dept,
+        role,
+        email,
+        phone,
+        region,
+        status: 'Đang hoạt động',
+        registeredAt: new Date().toISOString().slice(0, 10)
+    };
+
+    employees.push(newMember);
+    currentUser = newMember;
+    saveState();
+    updateHeaderUserUI();
+    closeModal();
+    navigate('employees');
+    showToast(`Đăng ký thành công! Thành viên "${name}" đã được lưu vào thư mục Thành viên.`);
+}
+
+function submitLoginMember(e) {
+    e.preventDefault();
+    const id = document.getElementById('login-member-id').value;
+    const found = employees.find(m => m.id === id);
+    if (found) {
+        currentUser = found;
+        saveState();
+        updateHeaderUserUI();
+        closeModal();
+        renderCurrentPage();
+        showToast(`Đã đăng nhập với tài khoản: ${found.name}`);
+    }
+}
+
+function saveState() {
+    try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify({ computers, repairs, ioTransactions }));
+    } catch (e) {
+        console.warn('Không thể lưu dữ liệu:', e);
+    }
+}
+
+function resetAllData() {
+    computers = [];
+    repairs = [];
+    ioTransactions = [];
+    quickSearchQuery = '';
+    quickStatusFilter = 'ALL';
+    saveState();
+    renderCurrentPage();
+    showToast('Đã đặt lại toàn bộ dữ liệu hệ thống về 0', 'info');
+}
+
+// ============================================================================
+// 2. TIỆN ÍCH CHUNG (UI, TOAST, MODAL, THỐNG KÊ)
+// ============================================================================
+function toggleSidebar() {
+    const sidebar = document.getElementById('sidebar');
+    const overlay = document.getElementById('sidebar-overlay');
+    sidebar.classList.toggle('-translate-x-full');
+    overlay.classList.toggle('hidden');
+}
+
+function showToast(message, type = 'success') {
+    const container = document.getElementById('toast-container');
+    const colors = {
+        success: 'bg-emerald-600 text-white',
+        warning: 'bg-amber-600 text-white',
+        info: 'bg-slate-800 text-white',
+        error: 'bg-rose-600 text-white'
+    };
+    const toast = document.createElement('div');
+    toast.className = `${colors[type] || colors.info} px-4 py-3 rounded-xl shadow-lg text-xs font-semibold pointer-events-auto transition-all`;
+    toast.textContent = message;
+    container.appendChild(toast);
+    setTimeout(() => toast.remove(), 3200);
+}
+
+function openModal(title, htmlContent) {
+    document.getElementById('modal-title').textContent = title;
+    document.getElementById('modal-body').innerHTML = htmlContent;
+    const backdrop = document.getElementById('modal-backdrop');
+    backdrop.classList.remove('hidden');
+    backdrop.classList.add('flex');
+}
+
+function closeModal() {
+    const backdrop = document.getElementById('modal-backdrop');
+    backdrop.classList.add('hidden');
+    backdrop.classList.remove('flex');
+}
+
+function formatCurrencyInput(input) {
+    const digits = input.value.replace(/\D/g, '');
+    input.value = digits ? Number(digits).toLocaleString('vi-VN') : '';
+}
+
+function getStatusBadge(status) {
+    const map = {
+        'Sửa xong': { dot: '🟢', cls: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
+        'Đang sửa': { dot: '🟡', cls: 'bg-amber-50 text-amber-700 border-amber-200' },
+        'Đã gửi trả chi nhánh': { dot: '🔵', cls: 'bg-blue-50 text-blue-700 border-blue-200' },
+        'Chờ xử lý': { dot: '🟠', cls: 'bg-orange-50 text-orange-700 border-orange-200' },
+        'Gửi nhà cung cấp': { dot: '🟣', cls: 'bg-purple-50 text-purple-700 border-purple-200' },
+        'Hỏng': { dot: '🔴', cls: 'bg-rose-50 text-rose-700 border-rose-200' },
+        'Thanh lý': { dot: '⚫', cls: 'bg-slate-100 text-slate-700 border-slate-300' }
+    };
+    const item = map[status] || { dot: '⚪', cls: 'bg-slate-50 text-slate-700 border-slate-200' };
+    return `<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold border ${item.cls}">${item.dot} ${status}</span>`;
+}
+
+function getRegionStats(region = null) {
+    const list = region ? computers.filter(c => c.region === region) : computers;
+    return {
+        total: list.length,
+        inUse: list.filter(c => c.status === 'Sửa xong').length,
+        repairing: list.filter(c => c.status === 'Đang sửa').length,
+        pending: list.filter(c => c.status === 'Chờ xử lý').length,
+        vendor: list.filter(c => c.status === 'Gửi nhà cung cấp').length,
+        inStock: list.filter(c => c.status === 'Đã gửi trả chi nhánh').length,
+        broken: list.filter(c => c.status === 'Hỏng').length,
+        disposed: list.filter(c => c.status === 'Thanh lý').length,
+        importedCount: ioTransactions.filter(t => t.type === 'NHẬP' && (!region || t.region === region)).length,
+        exportedCount: ioTransactions.filter(t => t.type === 'XUẤT' && (!region || t.region === region)).length
+    };
+}
+
+// ============================================================================
+// 3. ĐIỀU HƯỚNG TRANG
+// ============================================================================
+function navigate(page) {
+    currentPage = page;
+    document.querySelectorAll('.nav-item').forEach(btn => {
+        const isActive = btn.getAttribute('data-page') === page;
+        btn.className = isActive
+            ? 'nav-item w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl transition-colors text-left bg-blue-600 text-white shadow-xs'
+            : 'nav-item w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl transition-colors text-left text-slate-600 hover:bg-slate-100';
+    });
+
+    const sidebar = document.getElementById('sidebar');
+    if (sidebar && !sidebar.classList.contains('-translate-x-full') && window.innerWidth < 1024) {
+        toggleSidebar();
+    }
+    renderCurrentPage();
+}
+
+function renderCurrentPage() {
+    activeCharts.forEach(c => { try { c.destroy(); } catch (e) {} });
+    activeCharts = [];
+
+    const main = document.getElementById('main-content');
+    if (!main) return;
+
+    switch (currentPage) {
+        case 'dashboard': renderDashboard(main); break;
+        case 'computers': renderComputers(main); break;
+        case 'repairs': renderRepairs(main); break;
+        case 'io': renderIO(main); break;
+        case 'regions': renderRegions(main); break;
+        case 'employees': renderEmployees(main); break;
+        case 'reports': renderReports(main); break;
+        case 'settings': renderSettings(main); break;
+        default: renderDashboard(main);
+    }
+}
+
+// ============================================================================
+// 4. TRANG CHỦ (DASHBOARD + TRA CỨU NHANH + AI ANALYTICS)
+// ============================================================================
+function renderRegionMiniCard(region) {
+    const stats = getRegionStats(region);
+    return `
+        <div class="bg-white rounded-2xl border border-slate-200 p-5 shadow-xs hover:shadow-md transition-shadow space-y-4">
+            <div class="flex items-center justify-between">
+                <span class="px-3 py-1 rounded-lg bg-blue-50 text-blue-700 font-bold text-xs">🏢 ${region.toUpperCase()}</span>
+                <button onclick="computerFilters.region='${region}'; navigate('computers')" class="text-xs font-semibold text-slate-500 hover:text-blue-600">Chi tiết →</button>
+            </div>
+            <div class="flex items-baseline justify-between border-b border-slate-100 pb-3">
+                <span class="text-xs text-slate-500 font-medium">Tổng số máy</span>
+                <span class="text-2xl font-extrabold text-slate-900">${stats.total}</span>
+            </div>
+            <div class="grid grid-cols-2 gap-2.5 text-xs">
+                <div class="flex justify-between p-2 rounded-lg bg-emerald-50/70 text-emerald-800">
+                    <span>🟢 Sửa xong</span><strong>${stats.inUse}</strong>
+                </div>
+                <div class="flex justify-between p-2 rounded-lg bg-amber-50/70 text-amber-800">
+                    <span>🟡 Đang sửa</span><strong>${stats.repairing}</strong>
+                </div>
+                <div class="flex justify-between p-2 rounded-lg bg-orange-50/70 text-orange-800">
+                    <span>🟠 Chờ xử lý</span><strong>${stats.pending}</strong>
+                </div>
+                <div class="flex justify-between p-2 rounded-lg bg-blue-50/70 text-blue-800">
+                    <span>🔵 Đã gửi trả chi nhánh</span><strong>${stats.inStock}</strong>
+                </div>
+                <div class="flex justify-between p-2 rounded-lg bg-purple-50/70 text-purple-800">
+                    <span>🟣 Gửi nhà cung cấp</span><strong>${stats.vendor}</strong>
+                </div>
+                <div class="flex justify-between p-2 rounded-lg bg-slate-100 text-slate-800">
+                    <span>⚫ Máy thanh lý</span><strong>${stats.disposed}</strong>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+function buildAIInsights() {
+    const regions = ['Miền Bắc', 'Miền Trung', 'Miền Nam'];
+    const regionCosts = regions.map(reg => {
+        const regCompIds = new Set(computers.filter(c => c.region === reg).map(c => c.id));
+        const costFromRepairs = repairs
+            .filter(r => r.region === reg || regCompIds.has(r.computerId))
+            .reduce((sum, r) => sum + (Number(r.cost) || 0), 0);
+        return costFromRepairs;
+    });
+    const totalCost = regionCosts.reduce((a, b) => a + b, 0);
+
+    const total = computers.length;
+    const problemCount = computers.filter(c => ['Đang sửa', 'Chờ xử lý', 'Gửi nhà cung cấp', 'Hỏng'].includes(c.status)).length;
+    const repeatedRepairMachines = computers.filter(c => {
+        const count = repairs.filter(r => r.computerId === c.id).length;
+        return count >= 2 || c.status === 'Hỏng';
+    });
+
+    let riskScore = 0;
+    if (total > 0) {
+        const problemRatio = problemCount / total;
+        riskScore = Math.min(100, Math.round(problemRatio * 60 + repeatedRepairMachines.length * 12 + (totalCost > 10000000 ? 20 : totalCost > 3000000 ? 10 : 0)));
+    }
+    const riskLevel = riskScore >= 65
+        ? { label: 'Rủi ro Cao', badge: 'bg-rose-50 text-rose-700 border-rose-200' }
+        : riskScore >= 30
+            ? { label: 'Rủi ro Trung bình', badge: 'bg-amber-50 text-amber-700 border-amber-200' }
+            : { label: 'An toàn / Ổn định', badge: 'bg-emerald-50 text-emerald-700 border-emerald-200' };
+
+    const allIssues = [
+        ...computers.map(c => `${c.issue || ''} ${c.note || ''}`),
+        ...repairs.map(r => `${r.issue || ''} ${r.note || ''}`)
+    ].join(' ').toLowerCase();
+
+    const upgrades = [];
+    if (allIssues.includes('pin') || allIssues.includes('sạc')) {
+        upgrades.push('Thay thế lô Pin OEM mới cho các dòng máy lưu động để giảm 45% sự cố gián đoạn nguồn.');
+    }
+    if (allIssues.includes('ổ cứng') || allIssues.includes('ssd') || allIssues.includes('chậm') || allIssues.includes('ram')) {
+        upgrades.push('Nâng cấp đồng bộ SSD NVMe & RAM 16GB giúp tăng 35% hiệu suất xử lý và kéo dài vòng đời máy thêm 2 năm.');
+    }
+    if (allIssues.includes('màn hình') || allIssues.includes('bàn phím')) {
+        upgrades.push('Trang bị túi chống sốc & quy chuẩn bàn giao thiết bị tại chi nhánh để giảm hư hỏng vật lý.');
+    }
+    if (upgrades.length === 0) {
+        upgrades.push('Duy trì lịch bảo dưỡng định kỳ 6 tháng/lần và chuẩn hóa linh kiện dự phòng giữa 2 dòng HP & LENOVO để tối ưu chi phí kho.');
+    }
+
+    return { regions, regionCosts, totalCost, riskScore, riskLevel, repeatedRepairMachines, upgrades };
+}
+
+function renderDashboard(container) {
+    const globalStats = getRegionStats();
+    const ai = buildAIInsights();
+
+    container.innerHTML = `
+        <!-- THANH HÀNH ĐỘNG NHANH -->
+        <div class="flex flex-wrap items-center justify-between gap-3">
+            <div>
+                <h2 class="text-lg font-bold text-slate-800">Bảng điều khiển Tổng quan</h2>
+                <p class="text-xs text-slate-500">Theo dõi trạng thái thiết bị, sửa chữa và phân tích vận hành 3 miền</p>
+            </div>
+            <div class="flex flex-wrap gap-2">
+                <button onclick="openNewRepairModal()" class="px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold shadow-xs transition-colors">
+                    ⚠️ NHẬP MÁY LỖI
+                </button>
+            </div>
+        </div>
+
+        <!-- TRA CỨU NHANH -->
+        <div class="bg-white rounded-2xl border border-slate-200 p-5 shadow-xs space-y-4">
+            <div class="flex flex-wrap items-center justify-between gap-2">
+                <span class="text-xs font-extrabold uppercase tracking-wider text-slate-500">TRA CỨU NHANH</span>
+                <span class="text-[11px] text-slate-400">Nhập mã số máy hoặc nhấn vào thẻ trạng thái bên dưới để lọc</span>
+            </div>
+
+            <div class="relative">
+                <span class="absolute inset-y-0 left-3.5 flex items-center text-slate-400 text-sm">🔍</span>
+                <input id="quick-search-input" type="text" value="${quickSearchQuery}" oninput="handleQuickSearch(this.value)"
+                    placeholder="Nhập mã số máy cần tra cứu..."
+                    class="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+            </div>
+
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+                <button onclick="toggleQuickStatus('Sửa xong')" class="flex items-center justify-between p-3 rounded-xl border transition-all ${quickStatusFilter === 'Sửa xong' ? 'ring-2 ring-emerald-500 bg-emerald-50 border-emerald-300' : 'bg-emerald-50/60 border-emerald-200 hover:bg-emerald-50'}">
+                    <span class="font-semibold text-emerald-800">🟢 Sửa xong</span>
+                    <strong class="text-base text-emerald-900">${globalStats.inUse}</strong>
+                </button>
+                <button onclick="toggleQuickStatus('Đang sửa')" class="flex items-center justify-between p-3 rounded-xl border transition-all ${quickStatusFilter === 'Đang sửa' ? 'ring-2 ring-amber-500 bg-amber-50 border-amber-300' : 'bg-amber-50/60 border-amber-200 hover:bg-amber-50'}">
+                    <span class="font-semibold text-amber-800">🟡 Đang sửa</span>
+                    <strong class="text-base text-amber-900">${globalStats.repairing}</strong>
+                </button>
+                <button onclick="toggleQuickStatus('Chờ xử lý')" class="flex items-center justify-between p-3 rounded-xl border transition-all ${quickStatusFilter === 'Chờ xử lý' ? 'ring-2 ring-orange-500 bg-orange-50 border-orange-300' : 'bg-orange-50/60 border-orange-200 hover:bg-orange-50'}">
+                    <span class="font-semibold text-orange-800">🟠 Chờ xử lý</span>
+                    <strong class="text-base text-orange-900">${globalStats.pending}</strong>
+                </button>
+                <button onclick="toggleQuickStatus('Đã gửi trả chi nhánh')" class="flex items-center justify-between p-3 rounded-xl border transition-all ${quickStatusFilter === 'Đã gửi trả chi nhánh' ? 'ring-2 ring-blue-500 bg-blue-50 border-blue-300' : 'bg-blue-50/60 border-blue-200 hover:bg-blue-50'}">
+                    <span class="font-semibold text-blue-800">🔵 Đã gửi trả chi nhánh</span>
+                    <strong class="text-base text-blue-900">${globalStats.inStock}</strong>
+                </button>
+            </div>
+
+            <div id="quick-search-results" class="space-y-2"></div>
+        </div>
+
+        <!-- 3 THẺ KHU VỰC -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
+            ${renderRegionMiniCard('Miền Bắc')}
+            ${renderRegionMiniCard('Miền Trung')}
+            ${renderRegionMiniCard('Miền Nam')}
+        </div>
+
+        <!-- TỔNG QUAN TOÀN CÔNG TY & PHÂN TÍCH AI -->
+        <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs space-y-6">
+            <div class="flex flex-wrap items-center justify-between gap-2">
+                <h3 class="text-sm font-extrabold uppercase tracking-wider text-slate-800">TỔNG QUAN TOÀN CÔNG TY</h3>
+                <span class="text-xs text-slate-400">Số liệu cập nhật thời gian thực</span>
+            </div>
+
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3.5 text-center">
+                <div class="p-4 rounded-2xl bg-slate-50 border border-slate-200/80">
+                    <div class="text-2xl font-extrabold text-slate-900">${globalStats.total}</div>
+                    <div class="text-xs text-slate-500 mt-1">Tổng số máy</div>
+                </div>
+                <div class="p-4 rounded-2xl bg-emerald-50/70 border border-emerald-200/80">
+                    <div class="text-2xl font-extrabold text-emerald-700">${globalStats.inUse}</div>
+                    <div class="text-xs text-emerald-700 mt-1">Sửa xong</div>
+                </div>
+                <div class="p-4 rounded-2xl bg-amber-50/70 border border-amber-200/80">
+                    <div class="text-2xl font-extrabold text-amber-700">${globalStats.repairing}</div>
+                    <div class="text-xs text-amber-700 mt-1">Đang sửa chữa</div>
+                </div>
+                <div class="p-4 rounded-2xl bg-orange-50/70 border border-orange-200/80">
+                    <div class="text-2xl font-extrabold text-orange-700">${globalStats.pending}</div>
+                    <div class="text-xs text-orange-700 mt-1">Chờ xử lý</div>
+                </div>
+                <div class="p-4 rounded-2xl bg-blue-50/70 border border-blue-200/80">
+                    <div class="text-2xl font-extrabold text-blue-700">${globalStats.inStock}</div>
+                    <div class="text-xs text-blue-700 mt-1">Đã gửi trả chi nhánh</div>
+                </div>
+                <div class="p-4 rounded-2xl bg-indigo-50/70 border border-indigo-200/80">
+                    <div class="text-2xl font-extrabold text-indigo-700">${globalStats.exportedCount}</div>
+                    <div class="text-xs text-indigo-700 mt-1">Đã xuất kho</div>
+                </div>
+                <div class="p-4 rounded-2xl bg-rose-50/70 border border-rose-200/80">
+                    <div class="text-2xl font-extrabold text-rose-700">${globalStats.broken}</div>
+                    <div class="text-xs text-rose-700 mt-1">Máy hỏng</div>
+                </div>
+                <div class="p-4 rounded-2xl bg-slate-100 border border-slate-200">
+                    <div class="text-2xl font-extrabold text-slate-700">${globalStats.disposed}</div>
+                    <div class="text-xs text-slate-600 mt-1">Máy thanh lý</div>
+                </div>
+            </div>
+
+            <!-- BIỂU ĐỒ PHÂN BỔ THIẾT BỊ 3 MIỀN -->
+            <div class="h-60">
+                <canvas id="regionOverviewChart"></canvas>
+            </div>
+
+            <!-- MÔ-ĐUN AI PHÂN TÍCH CHI PHÍ, RỦI RO & ĐỀ XUẤT NÂNG CẤP -->
+            <div class="pt-5 border-t border-slate-200 space-y-4">
+                <div class="flex flex-wrap items-center justify-between gap-2">
+                    <div class="flex items-center gap-2">
+                        <span class="px-2.5 py-1 rounded-lg bg-indigo-600 text-white text-[11px] font-bold">AI ANALYTICS</span>
+                        <h4 class="text-sm font-bold text-slate-800">Phân tích Chi phí Vận hành, Rủi ro & Đề xuất Tối ưu</h4>
+                    </div>
+                    <span class="px-3 py-1 rounded-full text-xs font-bold border ${ai.riskLevel.badge}">
+                        Chỉ số Rủi ro: ${ai.riskScore}/100 • ${ai.riskLevel.label}
+                    </span>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
+                    <!-- Biểu đồ Chi phí vận hành 3 miền -->
+                    <div class="lg:col-span-2 bg-slate-50/70 rounded-2xl border border-slate-200 p-4 space-y-2">
+                        <div class="flex items-center justify-between text-xs">
+                            <span class="font-bold text-slate-700">Biểu đồ Chi phí Sửa chữa & Vận hành theo Miền</span>
+                            <span class="font-extrabold text-amber-700">Tổng: ${ai.totalCost.toLocaleString('vi-VN')} VND</span>
+                        </div>
+                        <div class="h-48">
+                            <canvas id="aiCostChart"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Đề xuất Thanh lý & Nâng cấp -->
+                    <div class="bg-slate-50/70 rounded-2xl border border-slate-200 p-4 space-y-3 text-xs">
+                        <div>
+                            <div class="font-bold text-slate-800 mb-1.5">🗑️ Đề xuất Thanh lý (Hư hỏng lặp lại)</div>
+                            ${ai.repeatedRepairMachines.length === 0
+                                ? `<div class="p-2.5 rounded-xl bg-white border border-slate-200 text-slate-500">Chưa phát hiện máy hư hỏng vượt ngưỡng thanh lý.</div>`
+                                : `<div class="space-y-1.5">
+                                    ${ai.repeatedRepairMachines.map(m => `
+                                        <div class="flex items-center justify-between p-2 rounded-xl bg-white border border-rose-200">
+                                            <div>
+                                                <span class="font-bold text-blue-600">Mã số máy: ${m.id}</span>
+                                                <div class="text-[11px] text-slate-500">${m.region} • ${m.issue || 'Hỏng nặng'}</div>
+                                            </div>
+                                            <button onclick="quickChangeStatus('${m.id}', 'Thanh lý', false)" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-rose-600 text-white font-semibold text-[11px]">
+                                                Thanh lý
+                                            </button>
+                                        </div>
+                                    `).join('')}
+                                </div>`
+                            }
+                        </div>
+
+                        <div class="pt-2 border-t border-slate-200">
+                            <div class="font-bold text-slate-800 mb-1.5">🚀 Khuyến nghị Nâng cấp & Tối ưu</div>
+                            <ul class="space-y-1.5 text-slate-600">
+                                ${ai.upgrades.map(u => `<li class="p-2 rounded-xl bg-white border border-slate-200 leading-relaxed">• ${u}</li>`).join('')}
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+
+    renderQuickSearchResults();
+
+    const overviewCtx = document.getElementById('regionOverviewChart');
+    if (overviewCtx) {
+        const regList = ['Miền Bắc', 'Miền Trung', 'Miền Nam'];
+        const regStats = regList.map(r => getRegionStats(r));
+        activeCharts.push(new Chart(overviewCtx, {
+            type: 'bar',
+            data: {
+                labels: regList,
+                datasets: [
+                    { label: 'Sửa xong', data: regStats.map(s => s.inUse), backgroundColor: '#10b981', borderRadius: 6 },
+                    { label: 'Đang sửa', data: regStats.map(s => s.repairing), backgroundColor: '#f59e0b', borderRadius: 6 },
+                    { label: 'Chờ xử lý', data: regStats.map(s => s.pending), backgroundColor: '#f97316', borderRadius: 6 },
+                    { label: 'Đã gửi trả chi nhánh', data: regStats.map(s => s.inStock), backgroundColor: '#3b82f6', borderRadius: 6 }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } },
+                plugins: { legend: { position: 'top' } }
+            }
+        }));
+    }
+
+    const costCtx = document.getElementById('aiCostChart');
+    if (costCtx) {
+        activeCharts.push(new Chart(costCtx, {
+            type: 'bar',
+            data: {
+                labels: ai.regions,
+                datasets: [{
+                    label: 'Chi phí dự kiến (VND)',
+                    data: ai.regionCosts,
+                    backgroundColor: ['#3b82f6', '#6366f1', '#f59e0b'],
+                    borderRadius: 8
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: { y: { beginAtZero: true } },
+                plugins: { legend: { display: false } }
+            }
+        }));
+    }
+}
+
+function handleQuickSearch(val) {
+    quickSearchQuery = val.trim();
+    if (quickSearchQuery) {
+        quickStatusFilter = 'ALL';
+    }
+    renderQuickSearchResults();
+}
+
+function toggleQuickStatus(status) {
+    quickStatusFilter = quickStatusFilter === status ? 'ALL' : status;
+    renderCurrentPage();
+}
+
+function renderQuickSearchResults() {
+    const box = document.getElementById('quick-search-results');
+    if (!box) return;
+
+    if (!quickSearchQuery && quickStatusFilter === 'ALL') {
+        box.innerHTML = '';
+        return;
+    }
+
+    const q = quickSearchQuery.toLowerCase();
+    const matchedMap = new Map();
+
+    computers.forEach(c => {
+        const latestRepair = [...repairs].reverse().find(r => r.computerId === c.id);
+        matchedMap.set(c.id, {
+            id: c.id,
+            user: c.user || (latestRepair && latestRepair.customer) || '-',
+            issue: c.issue || (latestRepair && latestRepair.issue) || '-',
+            cost: Number(c.cost || (latestRepair && latestRepair.cost) || 0),
+            status: c.status
+        });
+    });
+
+    repairs.forEach(r => {
+        if (!matchedMap.has(r.computerId)) {
+            matchedMap.set(r.computerId, {
+                id: r.computerId,
+                user: r.customer || '-',
+                issue: r.issue || '-',
+                cost: Number(r.cost || 0),
+                status: r.status || 'Chờ xử lý'
+            });
+        }
+    });
+
+    const results = Array.from(matchedMap.values()).filter(item => {
+        const matchQuery = !q || String(item.id).toLowerCase().includes(q) || String(item.user).toLowerCase().includes(q);
+        const matchStatus = quickStatusFilter === 'ALL' || item.status === quickStatusFilter;
+        return matchQuery && matchStatus;
+    });
+
+    if (results.length === 0) {
+        box.innerHTML = `<div class="p-3.5 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-500 text-center">Không tìm thấy mã số máy phù hợp.</div>`;
+        return;
+    }
+
+    box.innerHTML = results.map(item => `
+        <div onclick="openComputerDetail('${item.id}')" class="cursor-pointer p-3.5 rounded-xl border border-slate-200 hover:border-blue-400 hover:bg-blue-50/30 transition-all flex flex-wrap items-center justify-between gap-3">
+            <div class="space-y-1 text-xs">
+                <div class="flex flex-wrap items-center gap-2">
+                    <span class="font-bold text-blue-600 text-sm">Mã số máy: ${item.id}</span>
+                    <span class="text-slate-300">•</span>
+                    <span class="text-slate-700">Khách hàng: <strong>${item.user}</strong></span>
+                </div>
+                <div class="flex flex-wrap items-center gap-2 text-slate-600">
+                    <span>Tình trạng lỗi: <strong>${item.issue}</strong></span>
+                    <span class="text-slate-300">•</span>
+                    <span>Chi phí dự kiến: <strong class="text-amber-700">${item.cost.toLocaleString('vi-VN')} VND</strong></span>
+                </div>
+            </div>
+            <div>${getStatusBadge(item.status)}</div>
+        </div>
+    `).join('');
+}
+
+// ============================================================================
+// 5. QUẢN LÝ MÁY TÍNH & CHI TIẾT THIẾT BỊ
+// ============================================================================
+function renderComputers(container) {
+    const filtered = computers.filter(c => {
+        const q = computerFilters.search.toLowerCase();
+        const matchQ = !q || c.id.toLowerCase().includes(q) || (c.name || '').toLowerCase().includes(q) || (c.user || '').toLowerCase().includes(q);
+        const matchR = computerFilters.region === 'ALL' || c.region === computerFilters.region;
+        const matchS = computerFilters.status === 'ALL' || c.status === computerFilters.status;
+        return matchQ && matchR && matchS;
+    });
+
+    container.innerHTML = `
+        <div class="flex flex-wrap items-center justify-between gap-3">
+            <div>
+                <h2 class="text-lg font-bold text-slate-800">Danh sách Quản lý Máy tính</h2>
+                <p class="text-xs text-slate-500">Quản lý toàn bộ mã số máy, khách hàng và trạng thái 3 miền</p>
+            </div>
+            <div class="flex gap-2">
+                <button onclick="openNewRepairModal()" class="px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold shadow-xs">⚠️ NHẬP MÁY LỖI</button>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-2xl border border-slate-200 p-4 shadow-xs grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+            <input type="text" value="${computerFilters.search}" oninput="computerFilters.search=this.value; renderCurrentPage()"
+                placeholder="Tìm mã số máy, tên máy (HP/LENOVO), khách hàng..."
+                class="px-3.5 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <select onchange="computerFilters.region=this.value; renderCurrentPage()" class="px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white">
+                <option value="ALL" ${computerFilters.region==='ALL'?'selected':''}>Tất cả 3 Miền</option>
+                <option value="Miền Bắc" ${computerFilters.region==='Miền Bắc'?'selected':''}>Miền Bắc</option>
+                <option value="Miền Trung" ${computerFilters.region==='Miền Trung'?'selected':''}>Miền Trung</option>
+                <option value="Miền Nam" ${computerFilters.region==='Miền Nam'?'selected':''}>Miền Nam</option>
+            </select>
+            <select onchange="computerFilters.status=this.value; renderCurrentPage()" class="px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white">
+                <option value="ALL" ${computerFilters.status==='ALL'?'selected':''}>Tất cả tình trạng</option>
+                <option value="Sửa xong" ${computerFilters.status==='Sửa xong'?'selected':''}>Sửa xong</option>
+                <option value="Đang sửa" ${computerFilters.status==='Đang sửa'?'selected':''}>Đang sửa</option>
+                <option value="Chờ xử lý" ${computerFilters.status==='Chờ xử lý'?'selected':''}>Chờ xử lý</option>
+                <option value="Gửi nhà cung cấp" ${computerFilters.status==='Gửi nhà cung cấp'?'selected':''}>Gửi nhà cung cấp</option>
+                <option value="Đã gửi trả chi nhánh" ${computerFilters.status==='Đã gửi trả chi nhánh'?'selected':''}>Đã gửi trả chi nhánh</option>
+                <option value="Hỏng" ${computerFilters.status==='Hỏng'?'selected':''}>Hỏng</option>
+                <option value="Thanh lý" ${computerFilters.status==='Thanh lý'?'selected':''}>Thanh lý</option>
+            </select>
+        </div>
+
+        <div class="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-xs">
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse text-xs">
+                    <thead>
+                        <tr class="bg-slate-50 border-b border-slate-200 text-slate-600 font-bold uppercase tracking-wider">
+                            <th class="py-3.5 px-4">STT</th>
+                            <th class="py-3.5 px-4">MÃ SỐ MÁY</th>
+                            <th class="py-3.5 px-4">TÊN MÁY</th>
+                            <th class="py-3.5 px-4">KHÁCH HÀNG</th>
+                            <th class="py-3.5 px-4">MIỀN</th>
+                            <th class="py-3.5 px-4">TÌNH TRẠNG</th>
+                            <th class="py-3.5 px-4">NGÀY NHẬP</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100">
+                        ${filtered.length === 0
+                            ? `<tr><td colspan="7" class="py-8 text-center text-slate-400">Chưa có dữ liệu máy tính nào. Hãy nhập máy mới hoặc báo máy lỗi.</td></tr>`
+                            : filtered.map((c, idx) => `
+                                <tr onclick="openComputerDetail('${c.id}')" class="hover:bg-blue-50/40 cursor-pointer transition-colors">
+                                    <td class="py-3.5 px-4 text-slate-500">${idx + 1}</td>
+                                    <td class="py-3.5 px-4 font-bold text-blue-600">${c.id}</td>
+                                    <td class="py-3.5 px-4 font-bold text-slate-800">${c.name || 'HP'}</td>
+                                    <td class="py-3.5 px-4 font-medium text-slate-700">${c.user || '-'}</td>
+                                    <td class="py-3.5 px-4"><span class="px-2.5 py-1 rounded-lg bg-slate-100 text-slate-700 font-semibold">${c.region}</span></td>
+                                    <td class="py-3.5 px-4">${getStatusBadge(c.status)}</td>
+                                    <td class="py-3.5 px-4 text-slate-500">${c.importDate || '-'}</td>
+                                </tr>
+                            `).join('')
+                        }
+                    </tbody>
+                </table>
+            </div>
+            <div class="px-4 py-3 bg-slate-50/70 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
+                <span>Hiển thị <strong>${filtered.length}</strong> / ${computers.length} thiết bị</span>
+                <span>Mẹo: Nhấn vào bất kỳ hàng nào để thao tác nghiệp vụ</span>
+            </div>
+        </div>
+    `;
+}
+
+function openComputerDetail(id) {
+    let comp = computers.find(c => c.id === id);
+    if (!comp) {
+        const rep = repairs.find(r => r.computerId === id);
+        if (!rep) return;
+        comp = {
+            id: rep.computerId,
+            name: rep.brand || 'HP',
+            user: rep.customer || '-',
+            region: rep.region || 'Miền Bắc',
+            status: rep.status || 'Chờ xử lý',
+            issue: rep.issue || '-',
+            cost: rep.cost || 0,
+            importDate: rep.date || new Date().toISOString().slice(0, 10),
+            history: [{ date: rep.date || new Date().toLocaleDateString('vi-VN'), text: `Tiếp nhận máy lỗi: ${rep.issue}` }]
+        };
+    }
+
+    const latestRepair = [...repairs].reverse().find(r => r.computerId === comp.id);
+    const issueText = comp.issue || (latestRepair && latestRepair.issue) || '';
+    const costVal = Number(comp.cost || (latestRepair && latestRepair.cost) || 0);
+    const historyList = comp.history || [];
+    const isEditable = comp.status === 'Chờ xử lý' || comp.status === 'Đang sửa' || comp.status === 'Gửi nhà cung cấp';
+
+    openModal(`Chi tiết Thiết bị • ${comp.id}`, `
+        <div class="space-y-5 text-xs">
+            <div class="p-4 rounded-2xl bg-slate-50 border border-slate-200 flex flex-wrap items-center justify-between gap-3">
+                <div class="space-y-1">
+                    <div class="text-sm font-bold text-blue-600">Mã số máy: ${comp.id} <span class="text-slate-400 font-normal">• ${comp.name || 'HP'}</span></div>
+                    <div class="text-slate-600">Khách hàng: <strong>${comp.user || '-'}</strong></div>
+                </div>
+                <div>${getStatusBadge(comp.status)}</div>
+            </div>
+
+            ${isEditable ? `
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                    <div class="p-4 rounded-2xl border border-blue-200 bg-blue-50/20 space-y-1.5">
+                        <label for="detail-edit-issue" class="block text-[11px] font-bold text-slate-500 uppercase">Tình trạng lỗi (Chỉnh sửa)</label>
+                        <input id="detail-edit-issue" type="text" value="${issueText.replace(/"/g, '&quot;')}"
+                            placeholder="Nhập tình trạng lỗi..."
+                            class="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+                    <div class="p-4 rounded-2xl border border-blue-200 bg-blue-50/20 space-y-1.5">
+                        <label class="block text-[11px] font-bold text-slate-500 uppercase">Khu vực & Chi phí dự kiến (Chỉnh sửa)</label>
+                        <div class="grid grid-cols-2 gap-2">
+                            <select id="detail-edit-region" class="px-2.5 py-2 rounded-xl border border-slate-200 bg-white font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                <option value="Miền Bắc" ${comp.region === 'Miền Bắc' ? 'selected' : ''}>Miền Bắc</option>
+                                <option value="Miền Trung" ${comp.region === 'Miền Trung' ? 'selected' : ''}>Miền Trung</option>
+                                <option value="Miền Nam" ${comp.region === 'Miền Nam' ? 'selected' : ''}>Miền Nam</option>
+                            </select>
+                            <input id="detail-edit-cost" type="text" inputmode="numeric"
+                                value="${costVal ? costVal.toLocaleString('vi-VN') : ''}"
+                                oninput="formatCurrencyInput(this)"
+                                placeholder="Chi phí (VND)"
+                                class="px-2.5 py-2 rounded-xl border border-slate-200 bg-white font-bold text-amber-700 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        </div>
+                    </div>
+                </div>
+                <div class="flex justify-end">
+                    <button type="button" onclick="saveDetailEdits('${comp.id}')" class="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold shadow-xs transition-colors">
+                        💾 Lưu chỉnh sửa thông tin
+                    </button>
+                </div>
+            ` : `
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                    <div class="p-4 rounded-2xl border border-slate-200 space-y-1">
+                        <div class="text-[11px] font-semibold text-slate-400 uppercase">Tình trạng lỗi</div>
+                        <div class="font-bold text-slate-800 text-sm">${issueText || 'Không có lỗi ghi nhận'}</div>
+                    </div>
+                    <div class="p-4 rounded-2xl border border-slate-200 space-y-1">
+                        <div class="text-[11px] font-semibold text-slate-400 uppercase">Khu vực & Chi phí dự kiến</div>
+                        <div class="font-bold text-slate-800 text-sm">${comp.region} • <span class="text-amber-700">${costVal.toLocaleString('vi-VN')} VND</span></div>
+                    </div>
+                </div>
+            `}
+
+            <div class="space-y-2">
+                <div class="text-[11px] font-extrabold uppercase tracking-wider text-slate-500">THAO TÁC NHANH</div>
+                <div class="flex flex-wrap gap-2">
+                    <button onclick="quickChangeStatus('${comp.id}', 'Đang sửa')" class="px-3.5 py-2 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 font-bold transition-colors">
+                        🔧 Đang sửa chữa
+                    </button>
+                    <button onclick="quickChangeStatus('${comp.id}', 'Sửa xong')" class="px-3.5 py-2 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 font-bold transition-colors">
+                        ✅ Sửa xong
+                    </button>
+                    <button onclick="quickChangeStatus('${comp.id}', 'Đã gửi trả chi nhánh')" class="px-3.5 py-2 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-800 border border-blue-200 font-bold transition-colors">
+                        🏢 Gửi trả chi nhánh
+                    </button>
+                    <button onclick="quickChangeStatus('${comp.id}', 'Gửi nhà cung cấp')" class="px-3.5 py-2 rounded-xl bg-purple-50 hover:bg-purple-100 text-purple-800 border border-purple-200 font-bold transition-colors">
+                        🚚 Gửi nhà cung cấp
+                    </button>
+                    <button onclick="quickChangeStatus('${comp.id}', 'Thanh lý')" class="px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-300 font-bold transition-colors">
+                        ⚫ Thanh lý
+                    </button>
+                </div>
+            </div>
+
+            <div class="space-y-2">
+                <div class="text-[11px] font-extrabold uppercase tracking-wider text-slate-500">LỊCH SỬ HOẠT ĐỘNG (TIMELINE)</div>
+                <div class="space-y-2 border-l-2 border-blue-500 pl-3.5 ml-1">
+                    ${historyList.length === 0
+                        ? `<div class="text-slate-400">Chưa có lịch sử hoạt động.</div>`
+                        : historyList.map(h => `
+                            <div>
+                                <div class="font-bold text-slate-700">${h.date}</div>
+                                <div class="text-slate-600">${h.text}</div>
+                            </div>
+                        `).join('')
+                    }
+                </div>
+            </div>
+        </div>
+    `);
+}
+
+function saveDetailEdits(id) {
+    const issueEl = document.getElementById('detail-edit-issue');
+    const regionEl = document.getElementById('detail-edit-region');
+    const costEl = document.getElementById('detail-edit-cost');
+    if (!issueEl || !regionEl || !costEl) return;
+
+    const newIssue = issueEl.value.trim();
+    const newRegion = regionEl.value;
+    const newCost = Number(costEl.value.replace(/\D/g, '')) || 0;
+    const todayStr = new Date().toLocaleDateString('vi-VN');
+
+    const comp = computers.find(c => c.id === id);
+    if (comp) {
+        comp.issue = newIssue || comp.issue;
+        comp.region = newRegion;
+        comp.cost = newCost;
+        comp.history = comp.history || [];
+        comp.history.push({
+            date: todayStr,
+            text: `Cập nhật thông tin: Lỗi "${comp.issue}" • Khu vực ${newRegion} • Chi phí dự kiến ${newCost.toLocaleString('vi-VN')} VND`
+        });
+    }
+
+    const latestRepair = [...repairs].reverse().find(r => r.computerId === id);
+    if (latestRepair) {
+        latestRepair.issue = newIssue || latestRepair.issue;
+        latestRepair.region = newRegion;
+        latestRepair.cost = newCost;
+    }
+
+    saveState();
+    renderCurrentPage();
+    openComputerDetail(id);
+    showToast(`Đã lưu chỉnh sửa cho mã số máy ${id}`);
+}
+
+function quickChangeStatus(id, newStatus, reopenModal = true) {
+    const comp = computers.find(c => c.id === id);
+    if (!comp) return;
+    const todayStr = new Date().toLocaleDateString('vi-VN');
+    comp.status = newStatus;
+    comp.history = comp.history || [];
+
+    if (newStatus === 'Đã gửi trả chi nhánh') {
+        comp.history.push({ date: todayStr, text: `Gửi trả chi nhánh & nhập kho khu vực ${comp.region}` });
+        ioTransactions.unshift({
+            id: `PN-${Date.now().toString().slice(-5)}`,
+            type: 'NHẬP',
+            computerId: comp.id,
+            region: comp.region,
+            person: comp.user || 'Kho chi nhánh',
+            date: new Date().toISOString().slice(0, 10),
+            note: `Gửi trả chi nhánh ${comp.region} sau xử lý`
+        });
+    } else {
+        comp.history.push({ date: todayStr, text: `Thao tác nhanh: Chuyển sang trạng thái "${newStatus}"` });
+    }
+
+    repairs.forEach(r => {
+        if (r.computerId === id) {
+            r.status = newStatus;
+        }
+    });
+
+    saveState();
+    renderCurrentPage();
+    showToast(`Đã cập nhật mã số máy ${id} sang "${newStatus}"`);
+    if (reopenModal) openComputerDetail(id);
+}
+
+// ============================================================================
+// 6. BIỂU MẪU TẠO PHIẾU SỬA CHỮA & THÊM MÁY MỚI
+// ============================================================================
+function openNewRepairModal() {
+    const today = new Date().toISOString().slice(0, 10);
+    openModal('Tạo Phiếu Sửa Chữa Thiết Bị', `
+        <form onsubmit="submitNewRepair(event)" class="space-y-4 text-xs">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                <div>
+                    <label class="block font-bold text-slate-700 mb-1">Mã số máy *</label>
+                    <input id="rep-comp-id" type="text" inputmode="numeric" required
+                        oninput="this.value=this.value.replace(/[^0-9]/g,'')"
+                        placeholder="Nhập mã số máy (chỉ nhập số)..."
+                        class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+                <div>
+                    <label class="block font-bold text-slate-700 mb-1">Loại máy *</label>
+                    <select id="rep-brand" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <option value="HP">HP</option>
+                        <option value="LENOVO">LENOVO</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                <div>
+                    <label class="block font-bold text-slate-700 mb-1">Chi nhánh *</label>
+                    <select id="rep-region" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white">
+                        <option value="Miền Bắc">Miền Bắc</option>
+                        <option value="Miền Trung">Miền Trung</option>
+                        <option value="Miền Nam">Miền Nam</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block font-bold text-slate-700 mb-1">Tên khách hàng *</label>
+                    <input id="rep-customer" type="text" required placeholder="Nhập tên khách hàng..."
+                        class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+            </div>
+
+            <div>
+                <label class="block font-bold text-slate-700 mb-1">Tình trạng lỗi *</label>
+                <input id="rep-issue" type="text" required placeholder="VD: Máy không lên nguồn, hỏng màn hình, lỗi ổ cứng..."
+                    class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500">
+            </div>
+
+            <div>
+                <label class="block font-bold text-slate-700 mb-1">Ghi chú</label>
+                <input id="rep-note" type="text" placeholder="Nhập ghi chú thêm (phụ kiện kèm theo, yêu cầu gấp...)"
+                    class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500">
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+                <div>
+                    <label class="block font-bold text-slate-700 mb-1">Chi phí dự kiến (VND)</label>
+                    <input id="rep-cost" type="text" inputmode="numeric" oninput="formatCurrencyInput(this)" placeholder="VD: 1.500.000"
+                        class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+                <div>
+                    <label class="block font-bold text-slate-700 mb-1">Ngày báo lỗi</label>
+                    <input id="rep-date" type="date" value="${today}"
+                        class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200">
+                </div>
+                <div>
+                    <label class="block font-bold text-slate-700 mb-1">IT xử lý</label>
+                    <select id="rep-tech" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <option value="Bắc IT">Bắc IT</option>
+                        <option value="Bình IT">Bình IT</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="flex justify-end gap-2 pt-3 border-t border-slate-100">
+                <button type="button" onclick="closeModal()" class="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold">Hủy</button>
+                <button type="submit" class="px-5 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-bold shadow-xs">Lưu</button>
+            </div>
+        </form>
+    `);
+}
+
+function submitNewRepair(e) {
+    e.preventDefault();
+    const id = document.getElementById('rep-comp-id').value.trim();
+    const brand = document.getElementById('rep-brand').value;
+    const region = document.getElementById('rep-region').value;
+    const customer = document.getElementById('rep-customer').value.trim();
+    const issue = document.getElementById('rep-issue').value.trim();
+    const note = document.getElementById('rep-note').value.trim();
+    const cost = Number(document.getElementById('rep-cost').value.replace(/\D/g, '')) || 0;
+    const date = document.getElementById('rep-date').value || new Date().toISOString().slice(0, 10);
+    const tech = document.getElementById('rep-tech').value.trim() || 'Bắc IT';
+
+    if (!id) {
+        showToast('Vui lòng nhập mã số máy!', 'error');
+        return;
+    }
+
+    const todayStr = new Date().toLocaleDateString('vi-VN');
+    const historyNote = `Tiếp nhận máy lỗi (${brand}) - Chờ xử lý tại ${region} (KH: ${customer}): ${issue}${note ? ' • Ghi chú: ' + note : ''}`;
+
+    let existing = computers.find(c => c.id === id);
+    if (existing) {
+        existing.name = brand;
+        existing.region = region;
+        existing.user = customer;
+        existing.status = 'Chờ xử lý';
+        existing.issue = issue;
+        existing.note = note;
+        existing.cost = cost;
+        existing.history = existing.history || [];
+        existing.history.push({ date: todayStr, text: historyNote });
+    } else {
+        computers.unshift({
+            id,
+            name: brand,
+            user: customer,
+            region,
+            status: 'Chờ xử lý',
+            issue,
+            note,
+            cost,
+            importDate: date,
+            history: [{ date: todayStr, text: historyNote }]
+        });
+    }
+
+    repairs.unshift({
+        id: `SC-${Date.now().toString().slice(-5)}`,
+        computerId: id,
+        brand,
+        region,
+        customer,
+        issue,
+        note,
+        cost,
+        date,
+        tech,
+        status: 'Chờ xử lý'
+    });
+
+    saveState();
+    closeModal();
+    renderCurrentPage();
+    showToast(`Đã tiếp nhận phiếu sửa chữa cho mã số máy ${id}`);
+}
+
+function openNewComputerModal() {
+    const today = new Date().toISOString().slice(0, 10);
+    openModal('Thêm Máy Tính Mới Vào Hệ Thống', `
+        <form onsubmit="submitNewComputer(event)" class="space-y-4 text-xs">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                <div>
+                    <label class="block font-bold text-slate-700 mb-1">Mã số máy *</label>
+                    <input id="comp-id" type="text" inputmode="numeric" required
+                        oninput="this.value=this.value.replace(/[^0-9]/g,'')"
+                        placeholder="Chỉ nhập số..."
+                        class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200">
+                </div>
+                <div>
+                    <label class="block font-bold text-slate-700 mb-1">Loại máy *</label>
+                    <select id="comp-brand" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white">
+                        <option value="HP">HP</option>
+                        <option value="LENOVO">LENOVO</option>
+                    </select>
+                </div>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                <div>
+                    <label class="block font-bold text-slate-700 mb-1">Khách hàng / Người dùng</label>
+                    <input id="comp-user" type="text" placeholder="Nhập tên khách hàng..."
+                        class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200">
+                </div>
+                <div>
+                    <label class="block font-bold text-slate-700 mb-1">Khu vực (Miền)</label>
+                    <select id="comp-region" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white">
+                        <option value="Miền Bắc">Miền Bắc</option>
+                        <option value="Miền Trung">Miền Trung</option>
+                        <option value="Miền Nam">Miền Nam</option>
+                    </select>
+                </div>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                <div>
+                    <label class="block font-bold text-slate-700 mb-1">Tình trạng ban đầu</label>
+                    <select id="comp-status" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white">
+                        <option value="Sửa xong">Sửa xong</option>
+                        <option value="Đã gửi trả chi nhánh">Đã gửi trả chi nhánh</option>
+                        <option value="Chờ xử lý">Chờ xử lý</option>
+                        <option value="Đang sửa">Đang sửa</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block font-bold text-slate-700 mb-1">Ngày nhập</label>
+                    <input id="comp-date" type="date" value="${today}" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200">
+                </div>
+            </div>
+            <div class="flex justify-end gap-2 pt-3 border-t border-slate-100">
+                <button type="button" onclick="closeModal()" class="px-4 py-2 rounded-xl bg-slate-100 text-slate-700 font-bold">Hủy</button>
+                <button type="submit" class="px-5 py-2 rounded-xl bg-blue-600 text-white font-bold">Lưu máy</button>
+            </div>
+        </form>
+    `);
+}
+
+function submitNewComputer(e) {
+    e.preventDefault();
+    const id = document.getElementById('comp-id').value.trim();
+    const name = document.getElementById('comp-brand').value;
+    const user = document.getElementById('comp-user').value.trim() || '-';
+    const region = document.getElementById('comp-region').value;
+    const status = document.getElementById('comp-status').value;
+    const importDate = document.getElementById('comp-date').value;
+
+    if (computers.some(c => c.id === id)) {
+        showToast(`Mã số máy ${id} đã tồn tại!`, 'warning');
+        return;
+    }
+
+    computers.unshift({
+        id, name, user, region, status, importDate,
+        history: [{ date: new Date().toLocaleDateString('vi-VN'), text: `Thêm mới thiết bị (${name}) tại ${region}` }]
+    });
+
+    saveState();
+    closeModal();
+    renderCurrentPage();
+    showToast(`Đã thêm mã số máy ${id} thành công!`);
+}
+
+// ============================================================================
+// 7. MÁY ĐANG SỬA, NHẬP/XUẤT KHO & QUẢN LÝ 3 MIỀN
+// ============================================================================
+function renderRepairs(container) {
+    container.innerHTML = `
+        <div class="flex flex-wrap items-center justify-between gap-3">
+            <div>
+                <h2 class="text-lg font-bold text-slate-800">Danh sách Máy đang sửa & Bảo hành</h2>
+                <p class="text-xs text-slate-500">Theo dõi tiến độ sửa chữa, chi phí dự kiến và tình trạng lỗi</p>
+            </div>
+            <button onclick="openNewRepairModal()" class="px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold shadow-xs">
+                + TẠO PHIẾU SỬA CHỮA
+            </button>
+        </div>
+
+        <div class="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-xs">
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse text-xs">
+                    <thead>
+                        <tr class="bg-slate-50 border-b border-slate-200 text-slate-600 font-bold uppercase">
+                            <th class="py-3.5 px-4">MÃ PHIẾU</th>
+                            <th class="py-3.5 px-4">MÃ SỐ MÁY</th>
+                            <th class="py-3.5 px-4">KHÁCH HÀNG</th>
+                            <th class="py-3.5 px-4">MIỀN</th>
+                            <th class="py-3.5 px-4">TÌNH TRẠNG LỖI</th>
+                            <th class="py-3.5 px-4">CHI PHÍ DỰ KIẾN</th>
+                            <th class="py-3.5 px-4">TRẠNG THÁI</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100">
+                        ${repairs.length === 0
+                            ? `<tr><td colspan="7" class="py-8 text-center text-slate-400">Chưa có phiếu sửa chữa nào.</td></tr>`
+                            : repairs.map(r => `
+                                <tr onclick="openComputerDetail('${r.computerId}')" class="hover:bg-slate-50 cursor-pointer">
+                                    <td class="py-3.5 px-4 font-bold text-slate-700">${r.id}</td>
+                                    <td class="py-3.5 px-4 font-bold text-blue-600">${r.computerId}</td>
+                                    <td class="py-3.5 px-4">${r.customer || '-'}</td>
+                                    <td class="py-3.5 px-4">${r.region}</td>
+                                    <td class="py-3.5 px-4 font-medium">${r.issue}</td>
+                                    <td class="py-3.5 px-4 font-bold text-amber-700">${Number(r.cost || 0).toLocaleString('vi-VN')} đ</td>
+                                    <td class="py-3.5 px-4">${getStatusBadge(r.status || 'Chờ xử lý')}</td>
+                                </tr>
+                            `).join('')
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    `;
+}
+
+function renderIO(container) {
+    container.innerHTML = `
+        <div class="flex flex-wrap items-center justify-between gap-3">
+            <div>
+                <h2 class="text-lg font-bold text-slate-800">Lịch sử Nhập / Xuất & Gửi trả Chi nhánh</h2>
+                <p class="text-xs text-slate-500">Quản lý luân chuyển kho thiết bị theo từng khu vực</p>
+            </div>
+            <button onclick="openIOModal()" class="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-xs">
+                + TẠO PHIẾU NHẬP / XUẤT
+            </button>
+        </div>
+
+        <div class="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-xs">
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse text-xs">
+                    <thead>
+                        <tr class="bg-slate-50 border-b border-slate-200 text-slate-600 font-bold uppercase">
+                            <th class="py-3.5 px-4">MÃ PHIẾU</th>
+                            <th class="py-3.5 px-4">LOẠI</th>
+                            <th class="py-3.5 px-4">MÃ SỐ MÁY</th>
+                            <th class="py-3.5 px-4">KHU VỰC</th>
+                            <th class="py-3.5 px-4">NGƯỜI NHẬN / GIAO</th>
+                            <th class="py-3.5 px-4">NGÀY</th>
+                            <th class="py-3.5 px-4">GHI CHÚ</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100">
+                        ${ioTransactions.length === 0
+                            ? `<tr><td colspan="7" class="py-8 text-center text-slate-400">Chưa có giao dịch nhập/xuất kho nào.</td></tr>`
+                            : ioTransactions.map(t => `
+                                <tr class="hover:bg-slate-50">
+                                    <td class="py-3.5 px-4 font-bold text-slate-700">${t.id}</td>
+                                    <td class="py-3.5 px-4">
+                                        <span class="px-2.5 py-0.5 rounded-full font-bold ${t.type==='NHẬP' ? 'bg-blue-50 text-blue-700' : 'bg-indigo-50 text-indigo-700'}">${t.type}</span>
+                                    </td>
+                                    <td class="py-3.5 px-4 font-bold text-blue-600">${t.computerId}</td>
+                                    <td class="py-3.5 px-4">${t.region}</td>
+                                    <td class="py-3.5 px-4">${t.person}</td>
+                                    <td class="py-3.5 px-4 text-slate-500">${t.date}</td>
+                                    <td class="py-3.5 px-4 text-slate-600">${t.note || '-'}</td>
+                                </tr>
+                            `).join('')
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    `;
+}
+
+function openIOModal() {
+    const today = new Date().toISOString().slice(0, 10);
+    openModal('Tạo Phiếu Nhập / Xuất Kho', `
+        <form onsubmit="submitIOForm(event)" class="space-y-4 text-xs">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                <div>
+                    <label class="block font-bold text-slate-700 mb-1">Loại giao dịch</label>
+                    <select id="io-type" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white">
+                        <option value="NHẬP">NHẬP (Gửi trả chi nhánh)</option>
+                        <option value="XUẤT">XUẤT (Bàn giao khách hàng)</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block font-bold text-slate-700 mb-1">Mã số máy *</label>
+                    <input id="io-comp-id" type="text" inputmode="numeric" required
+                        oninput="this.value=this.value.replace(/[^0-9]/g,'')"
+                        placeholder="Chỉ nhập số..."
+                        class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200">
+                </div>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                <div>
+                    <label class="block font-bold text-slate-700 mb-1">Khu vực (Miền)</label>
+                    <select id="io-region" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white">
+                        <option value="Miền Bắc">Miền Bắc</option>
+                        <option value="Miền Trung">Miền Trung</option>
+                        <option value="Miền Nam">Miền Nam</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block font-bold text-slate-700 mb-1">Người nhận / giao</label>
+                    <input id="io-person" type="text" required placeholder="Tên người nhận/giao..."
+                        class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200">
+                </div>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                <div>
+                    <label class="block font-bold text-slate-700 mb-1">Ngày thực hiện</label>
+                    <input id="io-date" type="date" value="${today}" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200">
+                </div>
+                <div>
+                    <label class="block font-bold text-slate-700 mb-1">Ghi chú</label>
+                    <input id="io-note" type="text" placeholder="Nội dung bàn giao..." class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200">
+                </div>
+            </div>
+            <div class="flex justify-end gap-2 pt-3 border-t border-slate-100">
+                <button type="button" onclick="closeModal()" class="px-4 py-2 rounded-xl bg-slate-100 text-slate-700 font-bold">Hủy</button>
+                <button type="submit" class="px-5 py-2 rounded-xl bg-blue-600 text-white font-bold">Xác nhận</button>
+            </div>
+        </form>
+    `);
+}
+
+function submitIOForm(e) {
+    e.preventDefault();
+    const type = document.getElementById('io-type').value;
+    const computerId = document.getElementById('io-comp-id').value.trim();
+    const region = document.getElementById('io-region').value;
+    const person = document.getElementById('io-person').value.trim();
+    const date = document.getElementById('io-date').value;
+    const note = document.getElementById('io-note').value.trim();
+
+    ioTransactions.unshift({
+        id: `${type === 'NHẬP' ? 'PN' : 'PX'}-${Date.now().toString().slice(-5)}`,
+        type, computerId, region, person, date, note
+    });
+
+    const comp = computers.find(c => c.id === computerId);
+    if (comp) {
+        comp.region = region;
+        comp.status = type === 'NHẬP' ? 'Đã gửi trả chi nhánh' : 'Sửa xong';
+        if (type === 'XUẤT') comp.user = person;
+        comp.history = comp.history || [];
+        comp.history.push({ date: new Date().toLocaleDateString('vi-VN'), text: `Phiếu ${type} tại ${region} (${person})` });
+    }
+
+    saveState();
+    closeModal();
+    renderCurrentPage();
+    showToast(`Đã tạo phiếu ${type} cho mã số máy ${computerId}`);
+}
+
+function renderRegions(container) {
+    const regions = ['Miền Bắc', 'Miền Trung', 'Miền Nam'];
+    container.innerHTML = `
+        <div>
+            <h2 class="text-lg font-bold text-slate-800">Quản lý Chi nhánh 3 Miền</h2>
+            <p class="text-xs text-slate-500">Theo dõi nhân sự IT phụ trách và số liệu thiết bị từng khu vực</p>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            ${regions.map(reg => {
+                const info = REGION_INFO[reg];
+                const st = getRegionStats(reg);
+                return `
+                    <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs flex flex-col justify-between space-y-5">
+                        <div class="space-y-3">
+                            <div class="flex items-center justify-between">
+                                <span class="px-3 py-1 rounded-xl bg-blue-50 text-blue-700 font-bold text-xs">🏢 ${reg.toUpperCase()}</span>
+                                <span class="text-xl font-extrabold text-slate-900">${st.total} máy</span>
+                            </div>
+                            <div class="text-xs text-slate-600 space-y-1">
+                                <div><strong>Chi nhánh:</strong> ${info.branches.join(', ')}</div>
+                                <div><strong>IT phụ trách:</strong> ${info.itManager}</div>
+                            </div>
+                            <div class="grid grid-cols-2 gap-2 pt-2 text-xs">
+                                <div class="p-2.5 rounded-xl bg-emerald-50 text-emerald-800 flex justify-between">
+                                    <span>🟢 Sửa xong</span><strong>${st.inUse}</strong>
+                                </div>
+                                <div class="p-2.5 rounded-xl bg-amber-50 text-amber-800 flex justify-between">
+                                    <span>🟡 Đang sửa</span><strong>${st.repairing}</strong>
+                                </div>
+                                <div class="p-2.5 rounded-xl bg-orange-50 text-orange-800 flex justify-between">
+                                    <span>🟠 Chờ xử lý</span><strong>${st.pending}</strong>
+                                </div>
+                                <div class="p-2.5 rounded-xl bg-blue-50 text-blue-800 flex justify-between">
+                                    <span>🔵 Đã gửi trả chi nhánh</span><strong>${st.inStock}</strong>
+                                </div>
+                                <div class="p-2.5 rounded-xl bg-purple-50 text-purple-800 flex justify-between">
+                                    <span>🟣 Gửi nhà cung cấp</span><strong>${st.vendor}</strong>
+                                </div>
+                                <div class="p-2.5 rounded-xl bg-slate-100 text-slate-800 flex justify-between">
+                                    <span>⚫ Máy thanh lý</span><strong>${st.disposed}</strong>
+                                </div>
+                            </div>
+                        </div>
+                        <button onclick="computerFilters.region='${reg}'; navigate('computers')" class="w-full py-2.5 rounded-xl bg-slate-900 hover:bg-blue-600 text-white text-xs font-bold transition-colors">
+                            Xem danh sách máy ${reg} →
+                        </button>
+                    </div>
+                `;
+            }).join('')}
+        </div>
+    `;
+}
+
+function renderEmployees(container) {
+    container.innerHTML = `
+        <div>
+            <h2 class="text-lg font-bold text-slate-800">Danh sách Nhân viên & Phụ trách</h2>
+            <p class="text-xs text-slate-500">Quản lý nhân sự và thiết bị cấp phát theo 3 miền</p>
+        </div>
+
+        <div class="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-xs">
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse text-xs">
+                    <thead>
+                        <tr class="bg-slate-50 border-b border-slate-200 text-slate-600 font-bold uppercase tracking-wider">
+                            <th class="py-3.5 px-4">MÃ NV</th>
+                            <th class="py-3.5 px-4">HỌ TÊN</th>
+                            <th class="py-3.5 px-4">PHÒNG BAN</th>
+                            <th class="py-3.5 px-4">CHỨC VỤ</th>
+                            <th class="py-3.5 px-4">MIỀN</th>
+                            <th class="py-3.5 px-4">LIÊN HỆ</th>
+                            <th class="py-3.5 px-4">TRẠNG THÁI</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100">
+                        ${employees.map(emp => `
+                            <tr class="hover:bg-slate-50/70">
+                                <td class="py-3.5 px-4 font-bold text-blue-600">${emp.id}</td>
+                                <td class="py-3.5 px-4 font-semibold text-slate-800">${emp.name}</td>
+                                <td class="py-3.5 px-4">${emp.dept}</td>
+                                <td class="py-3.5 px-4 text-slate-500">${emp.role}</td>
+                                <td class="py-3.5 px-4">${emp.region}</td>
+                                <td class="py-3.5 px-4 text-slate-500">${emp.phone} • ${emp.email}</td>
+                                <td class="py-3.5 px-4"><span class="px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 font-semibold">${emp.status}</span></td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    `;
+}
+
+function renderReports(container) {
+    const st = getRegionStats();
+    container.innerHTML = `
+        <div class="flex flex-wrap items-center justify-between gap-3 no-print">
+            <div>
+                <h2 class="text-lg font-bold text-slate-800">Báo cáo Thống kê Tài sản IT</h2>
+                <p class="text-xs text-slate-500">Tổng hợp trạng thái thiết bị toàn công ty</p>
+            </div>
+            <div class="flex gap-2">
+                <button onclick="exportCSVReport()" class="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-xs">📥 XUẤT EXCEL (CSV)</button>
+                <button onclick="window.print()" class="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-900 text-white text-xs font-bold shadow-xs">🖨️ IN BÁO CÁO</button>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs">
+                <h3 class="text-sm font-bold text-slate-800 mb-4">Cơ cấu trạng thái thiết bị</h3>
+                <div class="h-64">
+                    <canvas id="reportPieChart"></canvas>
+                </div>
+            </div>
+            <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs space-y-3 text-xs">
+                <h3 class="text-sm font-bold text-slate-800 mb-2">Tóm tắt số liệu toàn hệ thống</h3>
+                <div class="flex justify-between p-3 rounded-xl bg-slate-50"><span>Tổng số thiết bị quản lý</span><strong>${st.total}</strong></div>
+                <div class="flex justify-between p-3 rounded-xl bg-emerald-50 text-emerald-800"><span>Sửa xong</span><strong>${st.inUse}</strong></div>
+                <div class="flex justify-between p-3 rounded-xl bg-amber-50 text-amber-800"><span>Đang sửa</span><strong>${st.repairing}</strong></div>
+                <div class="flex justify-between p-3 rounded-xl bg-orange-50 text-orange-800"><span>Chờ xử lý</span><strong>${st.pending}</strong></div>
+                <div class="flex justify-between p-3 rounded-xl bg-blue-50 text-blue-800"><span>Đã gửi trả chi nhánh</span><strong>${st.inStock}</strong></div>
+            </div>
+        </div>
+    `;
+
+    const pieCtx = document.getElementById('reportPieChart');
+    if (pieCtx) {
+        activeCharts.push(new Chart(pieCtx, {
+            type: 'doughnut',
+            data: {
+                labels: ['Sửa xong', 'Đã gửi trả chi nhánh', 'Đang sửa', 'Chờ xử lý', 'Hỏng / Thanh lý'],
+                datasets: [{
+                    data: [st.inUse, st.inStock, st.repairing, st.pending, st.broken + st.disposed],
+                    backgroundColor: ['#10b981', '#3b82f6', '#f59e0b', '#f97316', '#64748b']
+                }]
+            },
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right' } } }
+        }));
+    }
+}
+
+function exportCSVReport() {
+    const header = ['STT', 'Ma so may', 'Ten may', 'Khach hang', 'Mien', 'Tinh trang', 'Ngay nhap'];
+    const rows = computers.map((c, i) => [i + 1, c.id, c.name, c.user, c.region, c.status, c.importDate]);
+    const csvContent = '\uFEFF' + [header, ...rows].map(r => r.map(v => `"${String(v || '').replace(/"/g, '""')}"`).join(',')).join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `Bao_Cao_May_Tinh_3_Mien_${new Date().toISOString().slice(0, 10)}.csv`;
+    link.click();
+    showToast('Đã xuất tệp báo cáo Excel (CSV)!');
+}
+
+function renderSettings(container) {
+    container.innerHTML = `
+        <div class="max-w-xl bg-white rounded-2xl border border-slate-200 p-6 shadow-xs space-y-4 text-xs">
+            <h2 class="text-base font-bold text-slate-800">Cài đặt & Quản trị Dữ liệu</h2>
+            <p class="text-slate-500 leading-relaxed">
+                Hệ thống tự động lưu trữ mọi thao tác nhập liệu vào bộ nhớ trình duyệt. Nếu muốn xóa toàn bộ dữ liệu thử nghiệm để nhập lại từ đầu, bạn có thể sử dụng nút bên dưới.
+            </p>
+            <div class="pt-2">
+                <button onclick="resetAllData()" class="px-4 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold shadow-xs">
+                    🗑️ Xóa toàn bộ dữ liệu & Đặt lại về 0
+                </button>
+            </div>
+        </div>
+    `;
+}
+
+// ============================================================================
+// 8. KHỞI CHẠY ỨNG DỤNG
+// ============================================================================
+window.onload = function () {
+    loadState();
+    navigate('dashboard');
+};
+</script>
+</body>
+</html>
