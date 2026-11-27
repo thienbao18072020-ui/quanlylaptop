@@ -582,6 +582,43 @@ function setComputerStatusFilter(status) {
 // ============================================================================
 function renderRepairs() {
     const activeMachines = computers.filter(c => c.status === 'Chờ xử lý' || c.status === 'Đang sửa' || c.status === 'Gửi nhà cung cấp' || c.status === 'Sửa xong');
+    const northDoneList = computers.filter(c => c.status === 'Sửa xong' && c.region === 'Miền Bắc');
+    const centralDoneList = computers.filter(c => c.status === 'Sửa xong' && c.region === 'Miền Trung');
+    const southDoneList = computers.filter(c => c.status === 'Sửa xong' && c.region === 'Miền Nam');
+
+    const renderRegionDoneCard = (title, badgeColor, list) => `
+        <div class="card-elevated p-4 rounded-3xl space-y-3 flex flex-col">
+            <div class="flex items-center justify-between pb-2.5 border-b border-slate-100">
+                <span class="font-extrabold text-slate-800 text-xs sm:text-sm">${title}</span>
+                <span class="px-2.5 py-1 rounded-full text-[11px] font-extrabold ${badgeColor}">${list.length} máy</span>
+            </div>
+            ${list.length === 0 ? `
+                <div class="py-8 text-center rounded-2xl bg-slate-50 border border-slate-100 text-slate-400 text-xs">
+                    Chưa có máy nào sửa xong tại khu vực này.
+                </div>
+            ` : `
+                <div class="space-y-2.5 max-h-80 overflow-y-auto pr-1">
+                    ${list.map(c => `
+                        <div onclick="openComputerDetail('${c.id}')" class="p-3.5 rounded-2xl bg-white border border-slate-200/90 hover:border-emerald-400 hover:bg-emerald-50/20 cursor-pointer transition-all space-y-2">
+                            <div class="flex items-center justify-between gap-2">
+                                <div class="text-xs">
+                                    <span class="font-extrabold text-blue-600">#${c.code}</span>
+                                    <span class="font-bold text-slate-700 ml-1">(${c.model})</span>
+                                </div>
+                                ${getStatusBadge(c.status)}
+                            </div>
+                            <div class="text-slate-600 text-xs"><span class="font-semibold text-slate-500">Lỗi:</span> ${c.issue || '—'}</div>
+                            <div class="flex flex-wrap items-center justify-between gap-2 text-[11px] text-slate-500 pt-1.5 border-t border-slate-100">
+                                <span>Khách: <strong class="text-slate-700">${c.customer || '—'}</strong></span>
+                                <span>Xong: <strong class="text-emerald-700">${c.doneDate || '—'}</strong></span>
+                                <span>Chi phí: <strong class="text-slate-800">${formatMoney(c.cost)}</strong></span>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            `}
+        </div>
+    `;
 
     return `
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -589,7 +626,7 @@ function renderRepairs() {
                 <h2 class="text-xl font-extrabold text-slate-800">Danh sách máy đang nhận và sửa</h2>
                 <p class="text-xs text-slate-500 mt-0.5">Theo dõi tiến độ sửa chữa, chi phí dự kiến và tình trạng lỗi</p>
             </div>
-            <button onclick="openRepairSummaryModal()" class="px-4 py-2.5 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs shadow-xs transition-all flex items-center gap-2 self-start sm:self-auto">
+            <button onclick="openFaultyInputModal()" class="px-4 py-2.5 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs shadow-xs transition-all flex items-center gap-2 self-start sm:self-auto">
                 <span>🔧</span> <span>Máy sửa</span>
             </button>
         </div>
@@ -625,64 +662,66 @@ function renderRepairs() {
                     </tbody>
                 </table>
             </div>
+        <!-- 3 LIST RIÊNG BIỆT SAU KHI SỬA XONG: MIỀN BẮC, MIỀN TRUNG & MIỀN NAM -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            ${renderRegionDoneCard('🏢 List Miền Bắc (Sửa xong)', 'bg-blue-100 text-blue-800', northDoneList)}
+            ${renderRegionDoneCard('🏢 List Miền Trung (Sửa xong)', 'bg-indigo-100 text-indigo-800', centralDoneList)}
+            ${renderRegionDoneCard('🏢 List Miền Nam (Sửa xong)', 'bg-emerald-100 text-emerald-800', southDoneList)}
         </div>
     `;
 }
 
 function openRepairSummaryModal() {
-    const repairingList = computers.filter(c => c.status === 'Đang sửa' || c.status === 'Chờ xử lý' || c.status === 'Gửi nhà cung cấp');
-    const totalEstCost = repairingList.reduce((sum, c) => sum + (Number(c.cost) || 0), 0);
+    const northDoneList = computers.filter(c => c.status === 'Sửa xong' && c.region === 'Miền Bắc');
+    const centralDoneList = computers.filter(c => c.status === 'Sửa xong' && c.region === 'Miền Trung');
+    const southDoneList = computers.filter(c => c.status === 'Sửa xong' && c.region === 'Miền Nam');
 
-    openModal('🔧 Thông tin Máy sửa', `
+    const renderRegionDoneList = (title, badgeColor, list) => `
+        <div class="p-3.5 rounded-2xl border border-slate-200 bg-slate-50/60 space-y-2.5 flex flex-col">
+            <div class="flex items-center justify-between pb-2 border-b border-slate-200/80">
+                <span class="font-extrabold text-slate-800 text-xs">${title}</span>
+                <span class="px-2.5 py-0.5 rounded-full text-[11px] font-extrabold ${badgeColor}">${list.length} máy</span>
+            </div>
+            ${list.length === 0 ? `
+                <div class="py-8 text-center rounded-xl bg-white border border-slate-100 text-slate-400 text-[11px]">
+                    Chưa có máy nào sửa xong tại khu vực này.
+                </div>
+            ` : `
+                <div class="space-y-2 max-h-72 overflow-y-auto pr-1">
+                    ${list.map(c => `
+                        <div onclick="openComputerDetail('${c.id}')" class="p-3 rounded-xl bg-white border border-slate-200 hover:border-emerald-400 hover:bg-emerald-50/30 cursor-pointer transition-all space-y-1.5">
+                            <div class="flex items-center justify-between gap-2">
+                                <div>
+                                    <span class="font-extrabold text-blue-600 text-xs">#${c.code}</span>
+                                    <span class="font-bold text-slate-700 ml-1">(${c.model})</span>
+                                </div>
+                                ${getStatusBadge(c.status)}
+                            </div>
+                            <div class="text-slate-600 text-[11px]"><span class="font-semibold text-slate-500">Lỗi:</span> ${c.issue || '—'}</div>
+                            <div class="flex flex-wrap items-center justify-between gap-1 text-[11px] text-slate-500 pt-1 border-t border-slate-100">
+                                <span>Khách: <strong class="text-slate-700">${c.customer || '—'}</strong></span>
+                                <span>Xong: <strong class="text-emerald-700">${c.doneDate || '—'}</strong></span>
+                                <span>Chi phí: <strong class="text-slate-800">${formatMoney(c.cost)}</strong></span>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            `}
+        </div>
+    `;
+    openModal('🔧 Danh sách Máy đã Sửa xong (3 Miền)', `
         <div class="space-y-4 text-xs">
-            <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                <div class="p-3.5 rounded-2xl bg-amber-50 border border-amber-200">
-                    <div class="text-[11px] font-bold text-amber-700 uppercase">Đang sửa / Chờ xử lý</div>
-                    <div class="text-xl font-extrabold text-amber-800 mt-1">${repairingList.length} máy</div>
+            <div class="flex flex-wrap items-center justify-between gap-2 p-3 rounded-2xl bg-emerald-50 border border-emerald-200">
+                <div class="text-emerald-900 font-bold">
+                    Tổng máy đã sửa xong (3 Miền): <span class="font-extrabold text-sm">${northDoneList.length + centralDoneList.length + southDoneList.length} máy</span>
                 </div>
-                <div class="p-3.5 rounded-2xl bg-blue-50 border border-blue-200">
-                    <div class="text-[11px] font-bold text-blue-700 uppercase">Tổng chi phí dự kiến</div>
-                    <div class="text-base font-extrabold text-blue-800 mt-1">${formatMoney(totalEstCost)}</div>
-                </div>
-                <div class="p-3.5 rounded-2xl bg-emerald-50 border border-emerald-200 col-span-2 sm:col-span-1">
-                    <div class="text-[11px] font-bold text-emerald-700 uppercase">Đã sửa xong</div>
-                    <div class="text-xl font-extrabold text-emerald-800 mt-1">${computers.filter(c => c.status === 'Sửa xong').length} máy</div>
-                </div>
+                ${isAdmin() ? `<button type="button" onclick="openFaultyInputModal()" class="px-3 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-bold">+ Thêm máy sửa</button>` : ''}
             </div>
 
-            <div class="space-y-2">
-                <div class="flex items-center justify-between">
-                    <span class="font-extrabold text-slate-700">Chi tiết các máy đang tiếp nhận sửa chữa</span>
-                    ${isAdmin() ? `<button type="button" onclick="openFaultyInputModal()" class="px-3 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-bold">+ Thêm máy sửa</button>` : ''}
-                </div>
-
-                ${repairingList.length === 0 ? `
-                    <div class="p-8 text-center rounded-2xl bg-slate-50 border border-slate-100 text-slate-400">
-                        Hiện chưa có máy nào đang trong quá trình sửa chữa.
-                    </div>
-                ` : `
-                    <div class="space-y-2 max-h-72 overflow-y-auto pr-1">
-                        ${repairingList.map(c => `
-                            <div onclick="openComputerDetail('${c.id}')" class="p-3.5 rounded-2xl border border-slate-200 hover:border-blue-400 hover:bg-blue-50/30 cursor-pointer transition-all space-y-1.5">
-                                <div class="flex items-center justify-between">
-                                    <div>
-                                        <span class="font-extrabold text-blue-600 text-sm">#${c.code}</span>
-                                        <span class="font-bold text-slate-700 ml-1">(${c.model})</span>
-                                        <span class="text-slate-400 mx-1">•</span>
-                                        <span class="text-slate-600 font-semibold">${c.region}</span>
-                                    </div>
-                                    ${getStatusBadge(c.status)}
-                                </div>
-                                <div class="text-slate-600"><span class="font-semibold text-slate-500">Lỗi:</span> ${c.issue || '—'}</div>
-                                <div class="flex flex-wrap items-center justify-between gap-2 text-[11px] text-slate-500 pt-1 border-t border-slate-100">
-                                    <span>Khách: <strong class="text-slate-700">${c.customer || '—'}</strong></span>
-                                    <span>IT xử lý: <strong class="text-slate-700">${c.technician || '—'}</strong></span>
-                                    <span>Chi phí: <strong class="text-slate-800">${formatMoney(c.cost)}</strong></span>
-                                </div>
-                            </div>
-                        `).join('')}
-                    </div>
-                `}
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-3.5">
+                ${renderRegionDoneList('🏢 List Miền Bắc (Sửa xong)', 'bg-blue-100 text-blue-800', northDoneList)}
+                ${renderRegionDoneList('🏢 List Miền Trung (Sửa xong)', 'bg-indigo-100 text-indigo-800', centralDoneList)}
+                ${renderRegionDoneList('🏢 List Miền Nam (Sửa xong)', 'bg-emerald-100 text-emerald-800', southDoneList)}
             </div>
 
             <div class="pt-2 border-t border-slate-100 flex justify-end">
@@ -999,10 +1038,13 @@ function renderRegions() {
                             </div>
                         </div>
 
-                        <div class="pt-3 border-t border-slate-100 grid grid-cols-3 gap-2 text-center text-[11px]">
+                        <div class="pt-3 border-t border-slate-100 grid grid-cols-2 sm:grid-cols-3 gap-2 text-center text-[11px]">
                             <div class="p-2 rounded-xl bg-orange-50 text-orange-800 font-bold">Chờ xử lý<div class="text-sm font-extrabold">${list.filter(c => c.status === 'Chờ xử lý').length}</div></div>
                             <div class="p-2 rounded-xl bg-amber-50 text-amber-800 font-bold">Đang sửa<div class="text-sm font-extrabold">${list.filter(c => c.status === 'Đang sửa').length}</div></div>
                             <div class="p-2 rounded-xl bg-emerald-50 text-emerald-800 font-bold">Sửa xong<div class="text-sm font-extrabold">${list.filter(c => c.status === 'Sửa xong').length}</div></div>
+                            <div class="p-2 rounded-xl bg-blue-50 text-blue-800 font-bold">Gửi trả chi nhánh<div class="text-sm font-extrabold">${list.filter(c => c.status === 'Gửi trả chi nhánh').length}</div></div>
+                            <div class="p-2 rounded-xl bg-purple-50 text-purple-800 font-bold">Gửi nhà cung cấp<div class="text-sm font-extrabold">${list.filter(c => c.status === 'Gửi nhà cung cấp').length}</div></div>
+                            <div class="p-2 rounded-xl bg-slate-100 text-slate-800 font-bold">Thanh lý<div class="text-sm font-extrabold">${list.filter(c => c.status === 'Thanh lý').length}</div></div>
                         </div>
                     </div>
                 `;
