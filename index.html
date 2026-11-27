@@ -478,63 +478,89 @@ function renderDashboard() {
 }
 
 // ============================================================================
-// 6. QUẢN LÝ MÁY TÍNH (TẬP TRUNG CÁC NHÓM TRẠNG THÁI)
+// 6. QUẢN LÝ MÁY TÍNH (DANH SÁCH & BỘ LỌC)
 // ============================================================================
 function renderComputers() {
-    const countBy = (st) => computers.filter(c => c.status === st).length;
-
     const filtered = computers.filter(c => {
         const q = computerFilter.search.toLowerCase();
         const matchSearch = !q ||
             (c.code && c.code.toLowerCase().includes(q)) ||
             (c.model && c.model.toLowerCase().includes(q)) ||
-            (c.customer && c.customer.toLowerCase().includes(q));
+            (c.customer && c.customer.toLowerCase().includes(q)) ||
+            (c.issue && c.issue.toLowerCase().includes(q));
         const matchRegion = computerFilter.region === 'ALL' || c.region === computerFilter.region;
         const matchStatus = computerFilter.status === 'ALL' || c.status === computerFilter.status;
         return matchSearch && matchRegion && matchStatus;
     });
 
-    const quickTabs = [
-        { label: '🟠 Chờ xử lý', status: 'Chờ xử lý', count: countBy('Chờ xử lý'), cls: 'bg-orange-50/70 border-orange-200 text-orange-800' },
-        { label: '🟡 Đang sửa', status: 'Đang sửa', count: countBy('Đang sửa'), cls: 'bg-amber-50/70 border-amber-200 text-amber-800' },
-        { label: '🟢 Sửa xong', status: 'Sửa xong', count: countBy('Sửa xong'), cls: 'bg-emerald-50/70 border-emerald-200 text-emerald-800' },
-        { label: '🔵 Gửi trả chi nhánh', status: 'Gửi trả chi nhánh', count: countBy('Gửi trả chi nhánh'), cls: 'bg-blue-50/70 border-blue-200 text-blue-800' },
-        { label: '🟣 Gửi nhà cung cấp', status: 'Gửi nhà cung cấp', count: countBy('Gửi nhà cung cấp'), cls: 'bg-purple-50/70 border-purple-200 text-purple-800' },
-        { label: '⚫ Thanh lý', status: 'Thanh lý', count: countBy('Thanh lý'), cls: 'bg-slate-100 border-slate-300 text-slate-800' }
-    ];
+    const renderRegionDoneList = (regionName, badgeClass) => {
+        const list = computers.filter(c => c.region === regionName && c.status === 'Sửa xong');
+        return `
+            <div class="card-elevated p-5 rounded-3xl space-y-3">
+                <div class="flex items-center justify-between pb-2.5 border-b border-slate-100">
+                    <div class="flex items-center gap-2 font-extrabold text-slate-800 text-sm">
+                        <span>🏢</span>
+                        <span>List ${regionName} (Sửa xong)</span>
+                    </div>
+                    <span class="px-3 py-1 rounded-full text-xs font-extrabold ${badgeClass}">${list.length} máy</span>
+                </div>
+                ${list.length === 0 ? `
+                    <div class="p-6 rounded-2xl bg-slate-50/80 border border-slate-100 text-center text-xs text-slate-400">
+                        Chưa có máy nào sửa xong tại khu vực này.
+                    </div>
+                ` : `
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                        ${list.map(c => `
+                            <div onclick="openComputerDetail('${c.id}')" class="p-4 rounded-2xl border border-slate-200/80 hover:border-blue-300 bg-white hover:bg-slate-50/60 cursor-pointer transition-all space-y-2 text-xs">
+                                <div class="flex items-center justify-between">
+                                    <div>
+                                        <span class="font-extrabold text-blue-600 text-sm">#${c.code}</span>
+                                        <span class="text-slate-500 font-semibold ml-1">(${c.model})</span>
+                                    </div>
+                                    ${getStatusBadge(c.status)}
+                                </div>
+                                <div class="text-slate-600 pb-2 border-b border-slate-100">
+                                    Lỗi: <strong class="text-slate-800">${c.issue || '—'}</strong>
+                                </div>
+                                <div class="flex items-center justify-between text-[11px] text-slate-500">
+                                    <span>Khách: <strong class="text-slate-700">${c.customer || '—'}</strong></span>
+                                    <span>Xong: <strong class="text-emerald-600">${c.doneDate || '—'}</strong></span>
+                                </div>
+                                <div class="text-[11px] text-slate-500">
+                                    Chi phí: <strong class="text-slate-800">${formatMoney(c.cost)}</strong>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                `}
+            </div>
+        `;
+    };
 
     return `
-        <div>
-            <h2 class="text-xl font-extrabold text-slate-800">Danh sách Quản lý Máy tính</h2>
-            <p class="text-xs text-slate-500 mt-0.5">Quản lý tập trung các máy Chờ xử lý, Đang sửa, Sửa xong, Gửi trả chi nhánh, Gửi nhà cung cấp và Thanh lý 3 miền</p>
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+                <h2 class="text-xl font-extrabold text-slate-800">Danh sách Quản lý Máy tính</h2>
+                <p class="text-xs text-slate-500 mt-0.5">Nhấn vào từng dòng thiết bị để xem chi tiết hoặc cập nhật trạng thái xử lý</p>
+            </div>
         </div>
 
-        <!-- THẺ LỌC NHANH -->
-        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5">
-            ${quickTabs.map(t => `
-                <button onclick="setComputerStatusFilter('${t.status}')" class="p-3 rounded-2xl border ${t.cls} ${computerFilter.status === t.status ? 'ring-2 ring-blue-500' : ''} flex items-center justify-between transition-all text-left">
-                    <span class="text-xs font-extrabold">${t.label}</span>
-                    <span class="text-base font-extrabold">${t.count}</span>
-                </button>
-            `).join('')}
-        </div>
-
-        <!-- THANH TÌM KIẾM & BỘ LỌC -->
-        <div class="card-elevated p-4 rounded-3xl grid grid-cols-1 md:grid-cols-3 gap-3">
-            <input type="text" value="${computerFilter.search}" oninput="computerFilter.search=this.value; navigate('computers')" placeholder="Tìm mã số máy, loại máy (HP/LENOVO), khách hàng..." class="px-3.5 py-2.5 rounded-2xl border border-slate-200 text-xs focus:outline-none focus:border-blue-500">
-            <select onchange="computerFilter.region=this.value; navigate('computers')" class="px-3.5 py-2.5 rounded-2xl border border-slate-200 text-xs bg-white font-semibold focus:outline-none focus:border-blue-500">
-                <option value="ALL" ${computerFilter.region==='ALL'?'selected':''}>Tất cả 3 Miền</option>
-                <option value="Miền Bắc" ${computerFilter.region==='Miền Bắc'?'selected':''}>Miền Bắc</option>
-                <option value="Miền Trung" ${computerFilter.region==='Miền Trung'?'selected':''}>Miền Trung</option>
-                <option value="Miền Nam" ${computerFilter.region==='Miền Nam'?'selected':''}>Miền Nam</option>
+        <!-- FILTER BAR -->
+        <div class="card-elevated p-4 rounded-3xl grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+            <input type="text" value="${computerFilter.search}" oninput="computerFilter.search=this.value; document.getElementById('main-content').innerHTML=renderComputers();" placeholder="🔍 Tìm mã số máy, loại máy, khách hàng, lỗi..." class="px-3.5 py-2.5 rounded-2xl border border-slate-200 focus:outline-none focus:border-blue-500">
+            <select onchange="computerFilter.region=this.value; navigate('computers')" class="px-3.5 py-2.5 rounded-2xl border border-slate-200 bg-white font-semibold">
+                <option value="ALL" ${computerFilter.region === 'ALL' ? 'selected' : ''}>Tất cả Chi nhánh (3 Miền)</option>
+                <option value="Miền Bắc" ${computerFilter.region === 'Miền Bắc' ? 'selected' : ''}>Miền Bắc</option>
+                <option value="Miền Trung" ${computerFilter.region === 'Miền Trung' ? 'selected' : ''}>Miền Trung</option>
+                <option value="Miền Nam" ${computerFilter.region === 'Miền Nam' ? 'selected' : ''}>Miền Nam</option>
             </select>
-            <select onchange="computerFilter.status=this.value; navigate('computers')" class="px-3.5 py-2.5 rounded-2xl border border-slate-200 text-xs bg-white font-semibold focus:outline-none focus:border-blue-500">
-                <option value="ALL" ${computerFilter.status==='ALL'?'selected':''}>Tất cả tình trạng</option>
-                ${MANAGED_STATUSES.map(st => `<option value="${st}" ${computerFilter.status===st?'selected':''}>${st}</option>`).join('')}
+            <select onchange="computerFilter.status=this.value; navigate('computers')" class="px-3.5 py-2.5 rounded-2xl border border-slate-200 bg-white font-semibold">
+                <option value="ALL" ${computerFilter.status === 'ALL' ? 'selected' : ''}>Tất cả Trạng thái</option>
+                ${MANAGED_STATUSES.map(st => `<option value="${st}" ${computerFilter.status === st ? 'selected' : ''}>${st}</option>`).join('')}
             </select>
         </div>
 
-        <!-- BẢNG DỮ LIỆU -->
+        <!-- TABLE -->
         <div class="card-elevated rounded-3xl overflow-hidden">
             <div class="overflow-x-auto">
                 <table class="w-full text-left border-collapse text-xs">
@@ -552,7 +578,7 @@ function renderComputers() {
                     </thead>
                     <tbody class="divide-y divide-slate-100">
                         ${filtered.length === 0 ? `
-                            <tr><td colspan="8" class="py-10 text-center text-slate-400">Không tìm thấy máy tính phù hợp.</td></tr>
+                            <tr><td colspan="8" class="py-10 text-center text-slate-400">Không tìm thấy thiết bị nào phù hợp.</td></tr>
                         ` : filtered.map((c, idx) => `
                             <tr onclick="openComputerDetail('${c.id}')" class="hover:bg-slate-50 cursor-pointer transition-colors">
                                 <td class="py-3.5 px-4 text-slate-500 font-semibold">${idx + 1}</td>
@@ -561,7 +587,7 @@ function renderComputers() {
                                 <td class="py-3.5 px-4 text-slate-600">${c.customer || '—'}</td>
                                 <td class="py-3.5 px-4 text-slate-600">${c.region}</td>
                                 <td class="py-3.5 px-4">${getStatusBadge(c.status)}</td>
-                                <td class="py-3.5 px-4 text-slate-600 font-medium">${c.confirmDate || c.createdAt || '—'}</td>
+                                <td class="py-3.5 px-4 text-slate-500">${c.confirmDate || c.createdAt || '—'}</td>
                                 <td class="py-3.5 px-4 text-emerald-700 font-semibold">${c.doneDate || '—'}</td>
                             </tr>
                         `).join('')}
@@ -569,56 +595,21 @@ function renderComputers() {
                 </table>
             </div>
         </div>
-    `;
-}
 
-function setComputerStatusFilter(status) {
-    computerFilter.status = (computerFilter.status === status) ? 'ALL' : status;
-    navigate('computers');
-}
-
-// ============================================================================
-// 7. DANH SÁCH MÁY ĐANG NHẬN VÀ SỬA
-// ============================================================================
-function renderRepairs() {
-    const activeMachines = computers.filter(c => c.status === 'Chờ xử lý' || c.status === 'Đang sửa' || c.status === 'Gửi nhà cung cấp' || c.status === 'Sửa xong');
-    const northDoneList = computers.filter(c => c.status === 'Sửa xong' && c.region === 'Miền Bắc');
-    const centralDoneList = computers.filter(c => c.status === 'Sửa xong' && c.region === 'Miền Trung');
-    const southDoneList = computers.filter(c => c.status === 'Sửa xong' && c.region === 'Miền Nam');
-
-    const renderRegionDoneCard = (title, badgeColor, list) => `
-        <div class="card-elevated p-4 rounded-3xl space-y-3 flex flex-col">
-            <div class="flex items-center justify-between pb-2.5 border-b border-slate-100">
-                <span class="font-extrabold text-slate-800 text-xs sm:text-sm">${title}</span>
-                <span class="px-2.5 py-1 rounded-full text-[11px] font-extrabold ${badgeColor}">${list.length} máy</span>
-            </div>
-            ${list.length === 0 ? `
-                <div class="py-8 text-center rounded-2xl bg-slate-50 border border-slate-100 text-slate-400 text-xs">
-                    Chưa có máy nào sửa xong tại khu vực này.
-                </div>
-            ` : `
-                <div class="space-y-2.5 max-h-80 overflow-y-auto pr-1">
-                    ${list.map(c => `
-                        <div onclick="openComputerDetail('${c.id}')" class="p-3.5 rounded-2xl bg-white border border-slate-200/90 hover:border-emerald-400 hover:bg-emerald-50/20 cursor-pointer transition-all space-y-2">
-                            <div class="flex items-center justify-between gap-2">
-                                <div class="text-xs">
-                                    <span class="font-extrabold text-blue-600">#${c.code}</span>
-                                    <span class="font-bold text-slate-700 ml-1">(${c.model})</span>
-                                </div>
-                                ${getStatusBadge(c.status)}
-                            </div>
-                            <div class="text-slate-600 text-xs"><span class="font-semibold text-slate-500">Lỗi:</span> ${c.issue || '—'}</div>
-                            <div class="flex flex-wrap items-center justify-between gap-2 text-[11px] text-slate-500 pt-1.5 border-t border-slate-100">
-                                <span>Khách: <strong class="text-slate-700">${c.customer || '—'}</strong></span>
-                                <span>Xong: <strong class="text-emerald-700">${c.doneDate || '—'}</strong></span>
-                                <span>Chi phí: <strong class="text-slate-800">${formatMoney(c.cost)}</strong></span>
-                            </div>
-                        </div>
-                    `).join('')}
-                </div>
-            `}
+        <!-- 3 REGION COMPLETED LISTS -->
+        <div class="space-y-4">
+            ${renderRegionDoneList('Miền Bắc', 'bg-blue-50 text-blue-700')}
+            ${renderRegionDoneList('Miền Trung', 'bg-indigo-50 text-indigo-700')}
+            ${renderRegionDoneList('Miền Nam', 'bg-emerald-50 text-emerald-700')}
         </div>
     `;
+}
+
+// ============================================================================
+// 7. MÁY ĐANG SỬA (DANH SÁCH MÁY ĐANG NHẬN VÀ SỬA)
+// ============================================================================
+function renderRepairs() {
+    const activeRepairs = computers.filter(c => ['Chờ xử lý', 'Đang sửa', 'Sửa xong'].includes(c.status));
 
     return `
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -626,9 +617,11 @@ function renderRepairs() {
                 <h2 class="text-xl font-extrabold text-slate-800">Danh sách máy đang nhận và sửa</h2>
                 <p class="text-xs text-slate-500 mt-0.5">Theo dõi tiến độ sửa chữa, chi phí dự kiến và tình trạng lỗi</p>
             </div>
-            <button onclick="openFaultyInputModal()" class="px-4 py-2.5 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs shadow-xs transition-all flex items-center gap-2 self-start sm:self-auto">
-                <span>🔧</span> <span>Máy sửa</span>
-            </button>
+            ${isAdmin() ? `
+                <button onclick="openFaultyInputModal()" class="px-4 py-2.5 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs shadow-xs transition-all flex items-center gap-2 self-start">
+                    <span>🔧</span> <span>Máy sửa</span>
+                </button>
+            ` : ''}
         </div>
 
         <div class="card-elevated rounded-3xl overflow-hidden">
@@ -646,14 +639,14 @@ function renderRepairs() {
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-slate-100">
-                        ${activeMachines.length === 0 ? `
+                        ${activeRepairs.length === 0 ? `
                             <tr><td colspan="7" class="py-10 text-center text-slate-400">Chưa có máy nào đang nhận sửa chữa.</td></tr>
-                        ` : activeMachines.map(c => `
+                        ` : activeRepairs.map(c => `
                             <tr onclick="openComputerDetail('${c.id}')" class="hover:bg-slate-50 cursor-pointer transition-colors">
-                                <td class="py-3.5 px-4 font-extrabold text-blue-600">${c.code} <span class="text-slate-400 font-normal">(${c.model})</span></td>
+                                <td class="py-3.5 px-4 font-extrabold text-blue-600">${c.code} <span class="text-slate-400 font-semibold">(${c.model})</span></td>
                                 <td class="py-3.5 px-4 text-slate-700">${c.customer || '—'}</td>
                                 <td class="py-3.5 px-4 text-slate-600">${c.region}</td>
-                                <td class="py-3.5 px-4 text-slate-700 max-w-xs truncate">${c.issue || '—'}</td>
+                                <td class="py-3.5 px-4 text-slate-600">${c.issue || '—'}</td>
                                 <td class="py-3.5 px-4 font-bold text-slate-800">${formatMoney(c.cost)}</td>
                                 <td class="py-3.5 px-4 text-emerald-700 font-semibold">${c.doneDate || '—'}</td>
                                 <td class="py-3.5 px-4">${getStatusBadge(c.status)}</td>
@@ -662,77 +655,12 @@ function renderRepairs() {
                     </tbody>
                 </table>
             </div>
-        <!-- 3 LIST RIÊNG BIỆT SAU KHI SỬA XONG: MIỀN BẮC, MIỀN TRUNG & MIỀN NAM -->
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
-            ${renderRegionDoneCard('🏢 List Miền Bắc (Sửa xong)', 'bg-blue-100 text-blue-800', northDoneList)}
-            ${renderRegionDoneCard('🏢 List Miền Trung (Sửa xong)', 'bg-indigo-100 text-indigo-800', centralDoneList)}
-            ${renderRegionDoneCard('🏢 List Miền Nam (Sửa xong)', 'bg-emerald-100 text-emerald-800', southDoneList)}
         </div>
     `;
-}
-
-function openRepairSummaryModal() {
-    const northDoneList = computers.filter(c => c.status === 'Sửa xong' && c.region === 'Miền Bắc');
-    const centralDoneList = computers.filter(c => c.status === 'Sửa xong' && c.region === 'Miền Trung');
-    const southDoneList = computers.filter(c => c.status === 'Sửa xong' && c.region === 'Miền Nam');
-
-    const renderRegionDoneList = (title, badgeColor, list) => `
-        <div class="p-3.5 rounded-2xl border border-slate-200 bg-slate-50/60 space-y-2.5 flex flex-col">
-            <div class="flex items-center justify-between pb-2 border-b border-slate-200/80">
-                <span class="font-extrabold text-slate-800 text-xs">${title}</span>
-                <span class="px-2.5 py-0.5 rounded-full text-[11px] font-extrabold ${badgeColor}">${list.length} máy</span>
-            </div>
-            ${list.length === 0 ? `
-                <div class="py-8 text-center rounded-xl bg-white border border-slate-100 text-slate-400 text-[11px]">
-                    Chưa có máy nào sửa xong tại khu vực này.
-                </div>
-            ` : `
-                <div class="space-y-2 max-h-72 overflow-y-auto pr-1">
-                    ${list.map(c => `
-                        <div onclick="openComputerDetail('${c.id}')" class="p-3 rounded-xl bg-white border border-slate-200 hover:border-emerald-400 hover:bg-emerald-50/30 cursor-pointer transition-all space-y-1.5">
-                            <div class="flex items-center justify-between gap-2">
-                                <div>
-                                    <span class="font-extrabold text-blue-600 text-xs">#${c.code}</span>
-                                    <span class="font-bold text-slate-700 ml-1">(${c.model})</span>
-                                </div>
-                                ${getStatusBadge(c.status)}
-                            </div>
-                            <div class="text-slate-600 text-[11px]"><span class="font-semibold text-slate-500">Lỗi:</span> ${c.issue || '—'}</div>
-                            <div class="flex flex-wrap items-center justify-between gap-1 text-[11px] text-slate-500 pt-1 border-t border-slate-100">
-                                <span>Khách: <strong class="text-slate-700">${c.customer || '—'}</strong></span>
-                                <span>Xong: <strong class="text-emerald-700">${c.doneDate || '—'}</strong></span>
-                                <span>Chi phí: <strong class="text-slate-800">${formatMoney(c.cost)}</strong></span>
-                            </div>
-                        </div>
-                    `).join('')}
-                </div>
-            `}
-        </div>
-    `;
-    openModal('🔧 Danh sách Máy đã Sửa xong (3 Miền)', `
-        <div class="space-y-4 text-xs">
-            <div class="flex flex-wrap items-center justify-between gap-2 p-3 rounded-2xl bg-emerald-50 border border-emerald-200">
-                <div class="text-emerald-900 font-bold">
-                    Tổng máy đã sửa xong (3 Miền): <span class="font-extrabold text-sm">${northDoneList.length + centralDoneList.length + southDoneList.length} máy</span>
-                </div>
-                ${isAdmin() ? `<button type="button" onclick="openFaultyInputModal()" class="px-3 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-bold">+ Thêm máy sửa</button>` : ''}
-            </div>
-
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-3.5">
-                ${renderRegionDoneList('🏢 List Miền Bắc (Sửa xong)', 'bg-blue-100 text-blue-800', northDoneList)}
-                ${renderRegionDoneList('🏢 List Miền Trung (Sửa xong)', 'bg-indigo-100 text-indigo-800', centralDoneList)}
-                ${renderRegionDoneList('🏢 List Miền Nam (Sửa xong)', 'bg-emerald-100 text-emerald-800', southDoneList)}
-            </div>
-
-            <div class="pt-2 border-t border-slate-100 flex justify-end">
-                <button type="button" onclick="closeModal()" class="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold">Đóng</button>
-            </div>
-        </div>
-    `);
 }
 
 // ============================================================================
-// 8. NHẬP MÁY LỖI & CHI TIẾT / CẬP NHẬT MÁY
+// 8. MODAL NHẬP MÁY LỖI & CHI TIẾT / CẬP NHẬT THIẾT BỊ
 // ============================================================================
 function openFaultyInputModal() {
     if (!requireAdmin()) return;
@@ -743,11 +671,11 @@ function openFaultyInputModal() {
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                 <div>
                     <label class="block font-bold text-slate-700 mb-1">Mã số máy (tối đa 5 số) *</label>
-                    <input type="text" id="fm-code" required maxlength="5" inputmode="numeric" pattern="[0-9]{1,5}" oninput="this.value = this.value.replace(/[^0-9]/g, '').slice(0, 5)" placeholder="VD: 10245" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-blue-500">
+                    <input type="text" id="fm-code" required maxlength="5" oninput="this.value=this.value.replace(/\\D/g,'').slice(0,5)" placeholder="VD: 10245" class="w-full px-3.5 py-2.5 rounded-2xl border border-slate-200 focus:outline-none focus:border-blue-500">
                 </div>
                 <div>
                     <label class="block font-bold text-slate-700 mb-1">Loại máy *</label>
-                    <select id="fm-model" required class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white font-semibold focus:outline-none focus:border-blue-500">
+                    <select id="fm-model" class="w-full px-3.5 py-2.5 rounded-2xl border border-slate-200 bg-white font-semibold focus:outline-none focus:border-blue-500">
                         <option value="HP">HP</option>
                         <option value="LENOVO">LENOVO</option>
                     </select>
@@ -757,11 +685,11 @@ function openFaultyInputModal() {
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                 <div>
                     <label class="block font-bold text-slate-700 mb-1">Tên khách hàng</label>
-                    <input type="text" id="fm-customer" placeholder="Nhập tên khách hàng (không bắt buộc)..." class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-blue-500">
+                    <input type="text" id="fm-customer" placeholder="Nhập tên khách hàng (không bắt buộc)..." class="w-full px-3.5 py-2.5 rounded-2xl border border-slate-200 focus:outline-none focus:border-blue-500">
                 </div>
                 <div>
                     <label class="block font-bold text-slate-700 mb-1">Chi nhánh *</label>
-                    <select id="fm-region" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white font-semibold focus:outline-none focus:border-blue-500">
+                    <select id="fm-region" class="w-full px-3.5 py-2.5 rounded-2xl border border-slate-200 bg-white font-semibold focus:outline-none focus:border-blue-500">
                         <option value="Miền Bắc">Miền Bắc</option>
                         <option value="Miền Trung">Miền Trung</option>
                         <option value="Miền Nam">Miền Nam</option>
@@ -772,33 +700,33 @@ function openFaultyInputModal() {
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                 <div>
                     <label class="block font-bold text-slate-700 mb-1">Tình trạng lỗi *</label>
-                    <input type="text" id="fm-issue" required placeholder="VD: Hỏng pin, không nhận sạc, lỗi bàn phím..." class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-blue-500">
+                    <input type="text" id="fm-issue" required placeholder="VD: Hỏng pin, không nhận sạc, lỗi bàn phím..." class="w-full px-3.5 py-2.5 rounded-2xl border border-slate-200 focus:outline-none focus:border-blue-500">
                 </div>
                 <div>
                     <label class="block font-bold text-slate-700 mb-1">Ngày xác nhận lỗi</label>
-                    <input type="date" id="fm-confirm-date" value="${today}" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-blue-500">
+                    <input type="date" id="fm-confirm-date" value="${today}" class="w-full px-3.5 py-2.5 rounded-2xl border border-slate-200 focus:outline-none focus:border-blue-500">
                 </div>
             </div>
 
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                 <div>
                     <label class="block font-bold text-slate-700 mb-1">Ghi chú</label>
-                    <input type="text" id="fm-note" placeholder="Nhập ghi chú thêm (nếu có)..." class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-blue-500">
+                    <input type="text" id="fm-note" placeholder="Nhập ghi chú thêm (nếu có)..." class="w-full px-3.5 py-2.5 rounded-2xl border border-slate-200 focus:outline-none focus:border-blue-500">
                 </div>
                 <div>
                     <label class="block font-bold text-slate-700 mb-1">Ngày sửa xong</label>
-                    <input type="date" id="fm-done-date" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-blue-500">
+                    <input type="date" id="fm-done-date" class="w-full px-3.5 py-2.5 rounded-2xl border border-slate-200 focus:outline-none focus:border-blue-500">
                 </div>
             </div>
 
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                 <div>
                     <label class="block font-bold text-slate-700 mb-1">Chi phí dự kiến (VND)</label>
-                    <input type="text" id="fm-cost" inputmode="numeric" oninput="formatMoneyInput(this)" placeholder="500.000" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-blue-500">
+                    <input type="text" id="fm-cost" oninput="formatMoneyInput(this)" placeholder="500.000" class="w-full px-3.5 py-2.5 rounded-2xl border border-slate-200 focus:outline-none focus:border-blue-500">
                 </div>
                 <div>
                     <label class="block font-bold text-slate-700 mb-1">IT xử lý</label>
-                    <select id="fm-tech" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white font-semibold focus:outline-none focus:border-blue-500">
+                    <select id="fm-it" class="w-full px-3.5 py-2.5 rounded-2xl border border-slate-200 bg-white font-semibold focus:outline-none focus:border-blue-500">
                         <option value="Bắc IT">Bắc IT</option>
                         <option value="Bình IT">Bình IT</option>
                     </select>
@@ -806,8 +734,8 @@ function openFaultyInputModal() {
             </div>
 
             <div class="pt-3 border-t border-slate-100 flex justify-end gap-2">
-                <button type="button" onclick="closeModal()" class="px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold">Hủy</button>
-                <button type="submit" class="px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-extrabold shadow-sm">Lưu</button>
+                <button type="button" onclick="closeModal()" class="px-4 py-2.5 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold">Hủy</button>
+                <button type="submit" class="px-5 py-2.5 rounded-2xl bg-amber-500 hover:bg-amber-600 text-white font-extrabold shadow-xs">Lưu</button>
             </div>
         </form>
     `);
@@ -819,159 +747,160 @@ function submitFaultyMachine(e) {
 
     const code = document.getElementById('fm-code').value.trim();
     if (!/^\d{1,5}$/.test(code)) {
-        showToast('Mã số máy phải từ 1 đến 5 chữ số!', 'error');
+        showToast('Mã số máy phải là số và tối đa 5 chữ số!', 'error');
         return;
     }
 
     const model = document.getElementById('fm-model').value;
     const customer = document.getElementById('fm-customer').value.trim();
     const region = document.getElementById('fm-region').value;
-    const technician = document.getElementById('fm-tech').value;
-    const cost = parseMoneyInput(document.getElementById('fm-cost').value);
     const issue = document.getElementById('fm-issue').value.trim();
     const confirmDate = document.getElementById('fm-confirm-date').value || new Date().toISOString().split('T')[0];
     const doneDate = document.getElementById('fm-done-date').value || '';
     const note = document.getElementById('fm-note').value.trim();
+    const cost = parseMoneyInput(document.getElementById('fm-cost').value);
+    const itStaff = document.getElementById('fm-it').value;
 
-    const existingIdx = computers.findIndex(c => c.code.toLowerCase() === code.toLowerCase());
-    if (existingIdx !== -1) {
-        computers[existingIdx].model = model;
-        computers[existingIdx].customer = customer || computers[existingIdx].customer;
-        computers[existingIdx].region = region;
-        computers[existingIdx].status = 'Chờ xử lý';
-        computers[existingIdx].issue = issue;
-        computers[existingIdx].confirmDate = confirmDate;
-        computers[existingIdx].doneDate = doneDate;
-        computers[existingIdx].note = note;
-        computers[existingIdx].cost = cost;
-        computers[existingIdx].technician = technician;
-    } else {
-        computers.push({
-            id: 'COMP-' + Date.now(),
-            code,
-            model,
-            customer,
-            region,
-            status: 'Chờ xử lý',
-            issue,
-            confirmDate,
-            doneDate,
-            note,
-            cost,
-            technician,
-            createdAt: confirmDate
-        });
-    }
+    const newItem = {
+        id: 'COMP-' + Date.now(),
+        code,
+        model,
+        customer,
+        region,
+        issue,
+        confirmDate,
+        doneDate,
+        note,
+        cost,
+        itStaff,
+        status: doneDate ? 'Sửa xong' : 'Chờ xử lý',
+        createdAt: confirmDate
+    };
 
+    computers.push(newItem);
     saveData();
     closeModal();
-    showToast(`Đã tiếp nhận máy lỗi ${code} (${model}) - Chờ xử lý`);
+    showToast(`Đã tiếp nhận máy #${code} (${model})`);
     navigate(currentPage);
 }
 
 function openComputerDetail(id) {
-    const comp = computers.find(c => c.id === id);
-    if (!comp) return;
+    const c = computers.find(item => item.id === id);
+    if (!c) return;
 
-    const adminMode = isAdmin();
-    const formattedCost = Number(comp.cost) > 0 ? Number(comp.cost).toLocaleString('vi-VN') : '';
+    if (!isAdmin()) {
+        openModal(`💻 Chi tiết Thiết bị #${c.code}`, `
+            <div class="space-y-3 text-xs">
+                <div class="grid grid-cols-2 gap-3 p-4 rounded-2xl bg-slate-50 border border-slate-100">
+                    <div><span class="text-slate-400 block">Mã số máy</span><strong class="text-blue-600 text-sm">${c.code}</strong></div>
+                    <div><span class="text-slate-400 block">Loại máy</span><strong>${c.model}</strong></div>
+                    <div><span class="text-slate-400 block">Tên khách hàng</span><strong>${c.customer || '—'}</strong></div>
+                    <div><span class="text-slate-400 block">Chi nhánh</span><strong>${c.region}</strong></div>
+                    <div><span class="text-slate-400 block">Ngày báo lỗi</span><strong>${c.confirmDate || c.createdAt || '—'}</strong></div>
+                    <div><span class="text-slate-400 block">Ngày sửa xong</span><strong class="text-emerald-700">${c.doneDate || '—'}</strong></div>
+                    <div><span class="text-slate-400 block">Chi phí dự kiến</span><strong>${formatMoney(c.cost)}</strong></div>
+                    <div><span class="text-slate-400 block">IT xử lý</span><strong>${c.itStaff || '—'}</strong></div>
+                </div>
+                <div class="p-3.5 rounded-2xl border border-slate-200">
+                    <div class="text-slate-400 mb-1">Tình trạng lỗi</div>
+                    <div class="font-semibold text-slate-800">${c.issue || '—'}</div>
+                </div>
+                <div class="p-3.5 rounded-2xl border border-slate-200">
+                    <div class="text-slate-400 mb-1">Ghi chú</div>
+                    <div class="text-slate-700">${c.note || 'Không có ghi chú'}</div>
+                </div>
+                <div class="flex items-center justify-between pt-2">
+                    <div>Trạng thái: ${getStatusBadge(c.status)}</div>
+                    <button onclick="closeModal()" class="px-4 py-2 rounded-xl bg-slate-100 text-slate-700 font-bold">Đóng</button>
+                </div>
+            </div>
+        `);
+        return;
+    }
 
-    openModal(`Chi tiết Thiết bị: ${comp.code}`, `
-        <div class="space-y-4 text-xs">
-            <div class="p-4 rounded-2xl bg-slate-50 border border-slate-100 grid grid-cols-2 gap-3">
-                <div><span class="text-slate-400 block">Mã số máy</span><strong class="text-slate-800 text-sm">${comp.code}</strong></div>
-                <div><span class="text-slate-400 block">Loại máy</span><strong class="text-slate-800">${comp.model}</strong></div>
-                <div><span class="text-slate-400 block">Tên khách hàng</span><strong class="text-slate-800">${comp.customer || '—'}</strong></div>
-                <div><span class="text-slate-400 block">Chi nhánh</span><strong class="text-slate-800">${comp.region}</strong></div>
-                <div><span class="text-slate-400 block">Ngày báo lỗi</span><strong class="text-slate-800">${comp.confirmDate || comp.createdAt || '—'}</strong></div>
-                <div><span class="text-slate-400 block">Ngày sửa xong</span><strong class="text-emerald-700">${comp.doneDate || '—'}</strong></div>
-                <div><span class="text-slate-400 block">IT xử lý</span><strong class="text-slate-800">${comp.technician || '—'}</strong></div>
-                <div><span class="text-slate-400 block">Chi phí dự kiến</span><strong class="text-slate-800">${formatMoney(comp.cost)}</strong></div>
+    const formattedCost = c.cost ? Number(c.cost).toLocaleString('vi-VN') : '';
+
+    openModal(`🛠️ Cập nhật Thiết bị #${c.code}`, `
+        <form onsubmit="saveComputerDetail(event, '${c.id}')" class="space-y-4 text-xs">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                    <label class="block font-bold text-slate-700 mb-1">Mã số máy (tối đa 5 số)</label>
+                    <input type="text" id="ed-code" value="${c.code}" maxlength="5" oninput="this.value=this.value.replace(/\\D/g,'').slice(0,5)" class="w-full px-3.5 py-2.5 rounded-2xl border border-slate-200 font-bold">
+                </div>
+                <div>
+                    <label class="block font-bold text-slate-700 mb-1">Loại máy</label>
+                    <select id="ed-model" class="w-full px-3.5 py-2.5 rounded-2xl border border-slate-200 bg-white font-semibold">
+                        <option value="HP" ${c.model === 'HP' ? 'selected' : ''}>HP</option>
+                        <option value="LENOVO" ${c.model === 'LENOVO' ? 'selected' : ''}>LENOVO</option>
+                    </select>
+                </div>
             </div>
 
-            ${adminMode ? `
-                <form onsubmit="saveComputerDetail(event, '${comp.id}')" class="space-y-3 pt-2 border-t border-slate-100">
-                    <div class="font-extrabold text-slate-700">Cập nhật Trạng thái & Thông tin Xử lý</div>
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        <div>
-                            <label class="block font-bold text-slate-600 mb-1">Trạng thái thiết bị</label>
-                            <select id="ed-status" onchange="if(this.value==='Sửa xong' && !document.getElementById('ed-done-date').value) document.getElementById('ed-done-date').value=new Date().toISOString().split('T')[0]" class="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white font-bold">
-                                ${MANAGED_STATUSES.map(st => `<option value="${st}" ${comp.status === st ? 'selected' : ''}>${st}</option>`).join('')}
-                            </select>
-                        </div>
-                        <div>
-                            <label class="block font-bold text-slate-600 mb-1">Loại máy</label>
-                            <select id="ed-model" class="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white font-semibold">
-                                <option value="HP" ${comp.model === 'HP' ? 'selected' : ''}>HP</option>
-                                <option value="LENOVO" ${comp.model === 'LENOVO' ? 'selected' : ''}>LENOVO</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        <div>
-                            <label class="block font-bold text-slate-600 mb-1">Tên khách hàng</label>
-                            <input type="text" id="ed-customer" value="${comp.customer || ''}" placeholder="Không bắt buộc..." class="w-full px-3 py-2 rounded-xl border border-slate-200">
-                        </div>
-                        <div>
-                            <label class="block font-bold text-slate-600 mb-1">Chi nhánh</label>
-                            <select id="ed-region" class="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white font-semibold">
-                                <option value="Miền Bắc" ${comp.region === 'Miền Bắc' ? 'selected' : ''}>Miền Bắc</option>
-                                <option value="Miền Trung" ${comp.region === 'Miền Trung' ? 'selected' : ''}>Miền Trung</option>
-                                <option value="Miền Nam" ${comp.region === 'Miền Nam' ? 'selected' : ''}>Miền Nam</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        <div>
-                            <label class="block font-bold text-slate-600 mb-1">IT xử lý</label>
-                            <select id="ed-tech" class="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white font-semibold">
-                                <option value="Bắc IT" ${comp.technician === 'Bắc IT' ? 'selected' : ''}>Bắc IT</option>
-                                <option value="Bình IT" ${comp.technician === 'Bình IT' ? 'selected' : ''}>Bình IT</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label class="block font-bold text-slate-600 mb-1">Chi phí dự kiến (VND)</label>
-                            <input type="text" id="ed-cost" inputmode="numeric" oninput="formatMoneyInput(this)" value="${formattedCost}" placeholder="500.000" class="w-full px-3 py-2 rounded-xl border border-slate-200">
-                        </div>
-                    </div>
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        <div>
-                            <label class="block font-bold text-slate-600 mb-1">Tình trạng lỗi</label>
-                            <input type="text" id="ed-issue" value="${comp.issue || ''}" class="w-full px-3 py-2 rounded-xl border border-slate-200">
-                        </div>
-                        <div>
-                            <label class="block font-bold text-slate-600 mb-1">Ngày báo lỗi</label>
-                            <input type="date" id="ed-confirm-date" value="${comp.confirmDate || comp.createdAt || ''}" class="w-full px-3 py-2 rounded-xl border border-slate-200">
-                        </div>
-                    </div>
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        <div>
-                            <label class="block font-bold text-slate-600 mb-1">Ghi chú</label>
-                            <input type="text" id="ed-note" value="${comp.note || ''}" placeholder="Nhập ghi chú..." class="w-full px-3 py-2 rounded-xl border border-slate-200">
-                        </div>
-                        <div>
-                            <label class="block font-bold text-slate-600 mb-1">Ngày sửa xong</label>
-                            <input type="date" id="ed-done-date" value="${comp.doneDate || ''}" class="w-full px-3 py-2 rounded-xl border border-slate-200">
-                        </div>
-                    </div>
-                    <div class="flex items-center justify-between pt-3 border-t border-slate-100">
-                        <button type="button" onclick="deleteComputer('${comp.id}')" class="px-3.5 py-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-600 font-bold">🗑️ Xóa máy</button>
-                        <div class="flex gap-2">
-                            <button type="button" onclick="closeModal()" class="px-4 py-2 rounded-xl bg-slate-100 text-slate-700 font-bold">Đóng</button>
-                            <button type="submit" class="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-extrabold">Lưu cập nhật</button>
-                        </div>
-                    </div>
-                </form>
-            ` : `
-                <div class="p-3 rounded-xl bg-slate-50 text-slate-600 space-y-1">
-                    <div><span class="font-bold">Tình trạng lỗi:</span> ${comp.issue || 'Không có ghi nhận lỗi'}</div>
-                    <div><span class="font-bold">Ghi chú:</span> ${comp.note || '—'}</div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                    <label class="block font-bold text-slate-700 mb-1">Tên khách hàng</label>
+                    <input type="text" id="ed-customer" value="${c.customer || ''}" class="w-full px-3.5 py-2.5 rounded-2xl border border-slate-200">
                 </div>
-                <div class="flex justify-end">
-                    <button type="button" onclick="closeModal()" class="px-4 py-2 rounded-xl bg-slate-100 text-slate-700 font-bold">Đóng</button>
+                <div>
+                    <label class="block font-bold text-slate-700 mb-1">Chi nhánh</label>
+                    <select id="ed-region" class="w-full px-3.5 py-2.5 rounded-2xl border border-slate-200 bg-white font-semibold">
+                        <option value="Miền Bắc" ${c.region === 'Miền Bắc' ? 'selected' : ''}>Miền Bắc</option>
+                        <option value="Miền Trung" ${c.region === 'Miền Trung' ? 'selected' : ''}>Miền Trung</option>
+                        <option value="Miền Nam" ${c.region === 'Miền Nam' ? 'selected' : ''}>Miền Nam</option>
+                    </select>
                 </div>
-            `}
-        </div>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                    <label class="block font-bold text-slate-700 mb-1">Tình trạng lỗi *</label>
+                    <input type="text" id="ed-issue" required value="${c.issue || ''}" class="w-full px-3.5 py-2.5 rounded-2xl border border-slate-200">
+                </div>
+                <div>
+                    <label class="block font-bold text-slate-700 mb-1">Ngày xác nhận lỗi</label>
+                    <input type="date" id="ed-confirm-date" value="${c.confirmDate || c.createdAt || ''}" class="w-full px-3.5 py-2.5 rounded-2xl border border-slate-200">
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                    <label class="block font-bold text-slate-700 mb-1">Ghi chú</label>
+                    <input type="text" id="ed-note" value="${c.note || ''}" placeholder="Nhập ghi chú..." class="w-full px-3.5 py-2.5 rounded-2xl border border-slate-200">
+                </div>
+                <div>
+                    <label class="block font-bold text-slate-700 mb-1">Ngày sửa xong</label>
+                    <input type="date" id="ed-done-date" value="${c.doneDate || ''}" class="w-full px-3.5 py-2.5 rounded-2xl border border-slate-200">
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div>
+                    <label class="block font-bold text-slate-700 mb-1">Chi phí dự kiến (VND)</label>
+                    <input type="text" id="ed-cost" value="${formattedCost}" oninput="formatMoneyInput(this)" placeholder="500.000" class="w-full px-3.5 py-2.5 rounded-2xl border border-slate-200">
+                </div>
+                <div>
+                    <label class="block font-bold text-slate-700 mb-1">IT xử lý</label>
+                    <select id="ed-it" class="w-full px-3.5 py-2.5 rounded-2xl border border-slate-200 bg-white font-semibold">
+                        <option value="Bắc IT" ${c.itStaff === 'Bắc IT' ? 'selected' : ''}>Bắc IT</option>
+                        <option value="Bình IT" ${c.itStaff === 'Bình IT' ? 'selected' : ''}>Bình IT</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block font-bold text-slate-700 mb-1">Trạng thái xử lý</label>
+                    <select id="ed-status" onchange="if(this.value==='Sửa xong' && !document.getElementById('ed-done-date').value) document.getElementById('ed-done-date').value=new Date().toISOString().split('T')[0]" class="w-full px-3.5 py-2.5 rounded-2xl border border-slate-200 bg-white font-bold text-blue-700">
+                        ${MANAGED_STATUSES.map(st => `<option value="${st}" ${c.status === st ? 'selected' : ''}>${st}</option>`).join('')}
+                    </select>
+                </div>
+            </div>
+
+            <div class="pt-3 border-t border-slate-100 flex items-center justify-between gap-2">
+                <button type="button" onclick="deleteComputer('${c.id}')" class="px-3.5 py-2 rounded-2xl bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold">🗑️ Xóa máy</button>
+                <div class="flex gap-2">
+                    <button type="button" onclick="closeModal()" class="px-4 py-2 rounded-2xl bg-slate-100 text-slate-700 font-bold">Hủy</button>
+                    <button type="submit" class="px-5 py-2 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-extrabold">Lưu cập nhật</button>
+                </div>
+            </div>
+        </form>
     `);
 }
 
@@ -979,23 +908,30 @@ function saveComputerDetail(e, id) {
     e.preventDefault();
     if (!requireAdmin()) return;
 
-    const comp = computers.find(c => c.id === id);
-    if (!comp) return;
+    const c = computers.find(item => item.id === id);
+    if (!c) return;
 
-    comp.status = document.getElementById('ed-status').value;
-    comp.model = document.getElementById('ed-model').value;
-    comp.customer = document.getElementById('ed-customer').value.trim();
-    comp.region = document.getElementById('ed-region').value;
-    comp.technician = document.getElementById('ed-tech').value;
-    comp.cost = parseMoneyInput(document.getElementById('ed-cost').value);
-    comp.issue = document.getElementById('ed-issue').value.trim();
-    comp.confirmDate = document.getElementById('ed-confirm-date').value;
-    comp.note = document.getElementById('ed-note').value.trim();
-    comp.doneDate = document.getElementById('ed-done-date').value;
+    const code = document.getElementById('ed-code').value.trim();
+    if (!/^\d{1,5}$/.test(code)) {
+        showToast('Mã số máy phải là số và tối đa 5 chữ số!', 'error');
+        return;
+    }
+
+    c.code = code;
+    c.model = document.getElementById('ed-model').value;
+    c.customer = document.getElementById('ed-customer').value.trim();
+    c.region = document.getElementById('ed-region').value;
+    c.issue = document.getElementById('ed-issue').value.trim();
+    c.confirmDate = document.getElementById('ed-confirm-date').value;
+    c.note = document.getElementById('ed-note').value.trim();
+    c.doneDate = document.getElementById('ed-done-date').value;
+    c.cost = parseMoneyInput(document.getElementById('ed-cost').value);
+    c.itStaff = document.getElementById('ed-it').value;
+    c.status = document.getElementById('ed-status').value;
 
     saveData();
     closeModal();
-    showToast(`Đã cập nhật thông tin máy ${comp.code}`);
+    showToast(`Đã cập nhật thiết bị #${c.code}`);
     navigate(currentPage);
 }
 
@@ -1019,32 +955,54 @@ function renderRegions() {
             <p class="text-xs text-slate-500 mt-0.5">Địa chỉ chi nhánh và phụ trách kỹ thuật IT tại từng khu vực</p>
         </div>
 
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
+        <div class="space-y-4">
             ${regions.map(reg => {
+                const info = REGION_INFO[reg];
                 const list = computers.filter(c => c.region === reg);
                 return `
-                    <div class="card-elevated p-5 rounded-3xl flex flex-col justify-between space-y-4">
-                        <div class="space-y-3">
-                            <div class="flex items-center justify-between">
-                                <span class="text-base font-extrabold text-slate-800">🏢 ${reg}</span>
-                                <span class="px-3 py-1 rounded-full bg-blue-600 text-white text-xs font-extrabold">${list.length} thiết bị</span>
+                    <div class="card-elevated p-5 rounded-3xl space-y-4">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-2.5">
+                                <span class="text-lg">🏢</span>
+                                <h3 class="font-extrabold text-slate-800 text-base">${reg}</h3>
                             </div>
-                            <div class="p-3 rounded-2xl bg-slate-50 border border-slate-100 text-xs space-y-1.5">
-                                <div class="font-bold text-slate-700">Địa chỉ chi nhánh:</div>
-                                <div class="text-slate-600 leading-relaxed">${REGION_INFO[reg].branches[0]}</div>
-                            </div>
-                            <div class="text-xs text-slate-600">
-                                <span class="font-bold text-slate-700">Phụ trách IT:</span> ${REGION_INFO[reg].itManager}
-                            </div>
+                            <span class="px-3 py-1 rounded-full bg-blue-600 text-white text-xs font-extrabold">${list.length} thiết bị</span>
                         </div>
 
-                        <div class="pt-3 border-t border-slate-100 grid grid-cols-2 sm:grid-cols-3 gap-2 text-center text-[11px]">
-                            <div class="p-2 rounded-xl bg-orange-50 text-orange-800 font-bold">Chờ xử lý<div class="text-sm font-extrabold">${list.filter(c => c.status === 'Chờ xử lý').length}</div></div>
-                            <div class="p-2 rounded-xl bg-amber-50 text-amber-800 font-bold">Đang sửa<div class="text-sm font-extrabold">${list.filter(c => c.status === 'Đang sửa').length}</div></div>
-                            <div class="p-2 rounded-xl bg-emerald-50 text-emerald-800 font-bold">Sửa xong<div class="text-sm font-extrabold">${list.filter(c => c.status === 'Sửa xong').length}</div></div>
-                            <div class="p-2 rounded-xl bg-blue-50 text-blue-800 font-bold">Gửi trả chi nhánh<div class="text-sm font-extrabold">${list.filter(c => c.status === 'Gửi trả chi nhánh').length}</div></div>
-                            <div class="p-2 rounded-xl bg-purple-50 text-purple-800 font-bold">Gửi nhà cung cấp<div class="text-sm font-extrabold">${list.filter(c => c.status === 'Gửi nhà cung cấp').length}</div></div>
-                            <div class="p-2 rounded-xl bg-slate-100 text-slate-800 font-bold">Thanh lý<div class="text-sm font-extrabold">${list.filter(c => c.status === 'Thanh lý').length}</div></div>
+                        <div class="p-3.5 rounded-2xl bg-slate-50 border border-slate-100 text-xs space-y-1">
+                            <div class="font-bold text-slate-700">Địa chỉ chi nhánh:</div>
+                            <div class="text-slate-600">${info.branches[0]}</div>
+                        </div>
+
+                        <div class="text-xs text-slate-600">
+                            <strong class="text-slate-800">Phụ trách IT:</strong> ${info.itManager}
+                        </div>
+
+                        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5 text-center text-xs">
+                            <div class="p-3 rounded-2xl bg-orange-50 text-orange-800">
+                                <div class="font-bold">Chờ xử lý</div>
+                                <div class="text-base font-extrabold mt-0.5">${list.filter(c => c.status === 'Chờ xử lý').length}</div>
+                            </div>
+                            <div class="p-3 rounded-2xl bg-amber-50 text-amber-800">
+                                <div class="font-bold">Đang sửa</div>
+                                <div class="text-base font-extrabold mt-0.5">${list.filter(c => c.status === 'Đang sửa').length}</div>
+                            </div>
+                            <div class="p-3 rounded-2xl bg-emerald-50 text-emerald-800">
+                                <div class="font-bold">Sửa xong</div>
+                                <div class="text-base font-extrabold mt-0.5">${list.filter(c => c.status === 'Sửa xong').length}</div>
+                            </div>
+                            <div class="p-3 rounded-2xl bg-blue-50 text-blue-800">
+                                <div class="font-bold">Gửi trả chi nhánh</div>
+                                <div class="text-base font-extrabold mt-0.5">${list.filter(c => c.status === 'Gửi trả chi nhánh').length}</div>
+                            </div>
+                            <div class="p-3 rounded-2xl bg-purple-50 text-purple-800">
+                                <div class="font-bold">Gửi nhà cung cấp</div>
+                                <div class="text-base font-extrabold mt-0.5">${list.filter(c => c.status === 'Gửi nhà cung cấp').length}</div>
+                            </div>
+                            <div class="p-3 rounded-2xl bg-slate-100 text-slate-800">
+                                <div class="font-bold">Thanh lý</div>
+                                <div class="text-base font-extrabold mt-0.5">${list.filter(c => c.status === 'Thanh lý').length}</div>
+                            </div>
                         </div>
                     </div>
                 `;
@@ -1054,20 +1012,15 @@ function renderRegions() {
 }
 
 // ============================================================================
-// 10. QUẢN LÝ THÀNH VIÊN (CHỈ QUẢN TRỊ VIÊN MỚI XEM ĐƯỢC)
+// 10. THÀNH VIÊN & QUẢN LÝ TÀI KHOẢN (CHỈ QUẢN TRỊ VIÊN XEM ĐƯỢC)
 // ============================================================================
 function renderEmployees() {
     if (!isAdmin()) {
         return `
-            <div class="card-elevated p-10 rounded-3xl text-center max-w-lg mx-auto my-8 space-y-3">
+            <div class="card-elevated p-8 rounded-3xl text-center space-y-3 max-w-lg mx-auto mt-8">
                 <div class="text-3xl">🔒</div>
-                <h2 class="text-lg font-extrabold text-slate-800">Giới hạn quyền truy cập</h2>
-                <p class="text-xs text-slate-500">Chỉ tài khoản <strong>Quản trị viên</strong> mới có quyền xem danh sách các thành viên hệ thống và quản lý tài khoản.</p>
-                <div class="pt-2">
-                    <button onclick="openAuthModal('login')" class="px-5 py-2.5 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-extrabold">
-                        Đăng nhập Quản trị viên
-                    </button>
-                </div>
+                <h2 class="text-base font-extrabold text-slate-800">Khu vực giới hạn quyền truy cập</h2>
+                <p class="text-xs text-slate-500">Chỉ tài khoản <strong>Quản trị viên</strong> mới có quyền xem danh sách thành viên hệ thống và quản lý tài khoản.</p>
             </div>
         `;
     }
@@ -1097,17 +1050,17 @@ function renderEmployees() {
                     </thead>
                     <tbody class="divide-y divide-slate-100">
                         ${employees.map(emp => `
-                            <tr class="hover:bg-slate-50 transition-colors">
+                            <tr class="hover:bg-slate-50">
                                 <td class="py-3.5 px-4">
                                     <div class="font-extrabold text-slate-800">${emp.name}</div>
                                     <div class="text-[11px] text-slate-400">@${emp.username}</div>
                                 </td>
                                 <td class="py-3.5 px-4">
-                                    <span class="px-2.5 py-1 rounded-full text-[11px] font-bold border ${emp.role === 'Quản trị viên' ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-slate-100 text-slate-700 border-slate-200'}">
+                                    <span class="px-3 py-1 rounded-full text-[11px] font-bold border ${emp.role === 'Quản trị viên' ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-slate-100 text-slate-700 border-slate-200'}">
                                         ${emp.role}
                                     </span>
                                 </td>
-                                <td class="py-3.5 px-4 text-slate-600">${emp.region}</td>
+                                <td class="py-3.5 px-4 text-slate-600 font-medium">${emp.region || '—'}</td>
                                 <td class="py-3.5 px-4 text-slate-600">${emp.phone || '—'}</td>
                                 <td class="py-3.5 px-4 text-slate-500">${emp.registeredAt || '—'}</td>
                             </tr>
