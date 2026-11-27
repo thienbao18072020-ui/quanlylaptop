@@ -164,12 +164,12 @@ let currentPage = 'dashboard';
 let computerFilter = { search: '', region: 'ALL', status: 'ALL' };
 let activeCharts = [];
 
-const MANAGED_STATUSES = ['Đang sửa', 'Sửa xong', 'Gửi trả chi nhánh', 'Gửi nhà cung cấp', 'Thanh lý'];
+const MANAGED_STATUSES = ['Chờ xử lý', 'Đang sửa', 'Sửa xong', 'Gửi trả chi nhánh', 'Gửi nhà cung cấp', 'Thanh lý'];
 
 // ============================================================================
 // 2. LƯU TRỮ & PHÂN QUYỀN
 // ============================================================================
-function loadState() {
+function loadData() {
     try {
         const raw = localStorage.getItem(STORAGE_KEY);
         if (raw) {
@@ -177,14 +177,17 @@ function loadState() {
             if (Array.isArray(parsed.computers)) computers = parsed.computers;
             if (Array.isArray(parsed.repairs)) repairs = parsed.repairs;
             if (Array.isArray(parsed.employees) && parsed.employees.length > 0) employees = parsed.employees;
-            if (parsed.currentUser) currentUser = parsed.currentUser;
+            if (parsed.currentUser) {
+                const found = employees.find(e => e.id === parsed.currentUser.id);
+                currentUser = found || null;
+            }
         }
     } catch (e) {
-        console.warn('Không thể tải dữ liệu lưu trữ:', e);
+        console.error('Lỗi đọc dữ liệu:', e);
     }
 }
 
-function saveState() {
+function saveData() {
     try {
         localStorage.setItem(STORAGE_KEY, JSON.stringify({
             computers,
@@ -193,47 +196,42 @@ function saveState() {
             currentUser
         }));
     } catch (e) {
-        console.warn('Không thể lưu dữ liệu:', e);
+        console.error('Lỗi lưu dữ liệu:', e);
     }
 }
 
 function isAdmin() {
-    return currentUser && currentUser.role === 'Quản trị viên';
+    return !!(currentUser && currentUser.role === 'Quản trị viên');
 }
 
 function requireAdmin() {
     if (!isAdmin()) {
-        showToast('Chỉ Quản trị viên mới được phép thực hiện thao tác này!', 'error');
+        showToast('Chỉ Quản trị viên đã đăng nhập mới có quyền thực hiện thao tác này!', 'error');
         return false;
     }
     return true;
 }
 
 // ============================================================================
-// 3. TIỆN ÍCH UI (TOAST, MODAL, SIDEBAR, FORMAT)
+// 3. TIỆN ÍCH GIAO DIỆN (TOAST, MODAL, FORMAT)
 // ============================================================================
-function showToast(message, type = 'info') {
+function showToast(msg, type = 'success') {
     const container = document.getElementById('toast-container');
     if (!container) return;
-    const colors = {
-        success: 'bg-emerald-600 text-white',
-        error: 'bg-rose-600 text-white',
-        warning: 'bg-amber-500 text-white',
-        info: 'bg-slate-800 text-white'
-    };
-    const toast = document.createElement('div');
-    toast.className = `pointer-events-auto px-4 py-3 rounded-2xl shadow-lg text-xs font-bold flex items-center gap-2 transition-all transform translate-y-0 ${colors[type] || colors.info}`;
-    toast.textContent = message;
-    container.appendChild(toast);
+    const el = document.createElement('div');
+    const bg = type === 'error' ? 'bg-rose-600' : type === 'info' ? 'bg-slate-800' : 'bg-emerald-600';
+    el.className = `${bg} text-white px-4 py-3 rounded-2xl shadow-lg text-xs font-bold flex items-center gap-2 pointer-events-auto transition-all`;
+    el.innerHTML = `<span>${type === 'error' ? '⚠️' : '✅'}</span><span>${msg}</span>`;
+    container.appendChild(el);
     setTimeout(() => {
-        toast.style.opacity = '0';
-        setTimeout(() => toast.remove(), 300);
+        el.style.opacity = '0';
+        setTimeout(() => el.remove(), 250);
     }, 3000);
 }
 
-function openModal(title, htmlContent) {
+function openModal(title, html) {
     document.getElementById('modal-title').textContent = title;
-    document.getElementById('modal-body').innerHTML = htmlContent;
+    document.getElementById('modal-body').innerHTML = html;
     const backdrop = document.getElementById('modal-backdrop');
     backdrop.classList.remove('hidden');
     backdrop.classList.add('flex');
@@ -246,19 +244,29 @@ function closeModal() {
 }
 
 function toggleSidebar() {
-    const sidebar = document.getElementById('sidebar');
-    const overlay = document.getElementById('sidebar-overlay');
-    sidebar.classList.toggle('-translate-x-full');
-    overlay.classList.toggle('hidden');
+    const sb = document.getElementById('sidebar');
+    const ov = document.getElementById('sidebar-overlay');
+    sb.classList.toggle('-translate-x-full');
+    ov.classList.toggle('hidden');
 }
 
-function formatMoney(num) {
-    const val = Number(num) || 0;
-    return val.toLocaleString('vi-VN') + ' đ';
+function formatMoney(val) {
+    const n = Number(val) || 0;
+    return n > 0 ? n.toLocaleString('vi-VN') + ' đ' : '0 đ';
+}
+
+function formatMoneyInput(input) {
+    const raw = input.value.replace(/\D/g, '');
+    input.value = raw ? Number(raw).toLocaleString('vi-VN') : '';
+}
+
+function parseMoneyInput(val) {
+    return Number(String(val || '').replace(/\D/g, '')) || 0;
 }
 
 function getStatusBadge(status) {
     const map = {
+        'Chờ xử lý': 'bg-orange-100 text-orange-800 border-orange-200',
         'Đang sửa': 'bg-amber-100 text-amber-800 border-amber-200',
         'Sửa xong': 'bg-emerald-100 text-emerald-800 border-emerald-200',
         'Gửi trả chi nhánh': 'bg-blue-100 text-blue-800 border-blue-200',
@@ -269,18 +277,21 @@ function getStatusBadge(status) {
     return `<span class="inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-bold border ${cls}">${status}</span>`;
 }
 
-function updateHeaderUserUI() {
+// ============================================================================
+// 4. HEADER & ĐIỀU HƯỚNG TRANG
+// ============================================================================
+function updateHeaderUI() {
     const nameEl = document.getElementById('header-user-name');
     const roleEl = document.getElementById('header-user-role');
     const avatarEl = document.getElementById('header-user-avatar');
     const authBtn = document.getElementById('header-auth-btn');
-    const settingsNav = document.getElementById('nav-settings-btn');
+    const settingsBtn = document.getElementById('nav-settings-btn');
 
     if (currentUser) {
         nameEl.textContent = currentUser.name;
         roleEl.textContent = currentUser.role;
         avatarEl.textContent = currentUser.name.slice(0, 2).toUpperCase();
-        avatarEl.className = 'w-10 h-10 rounded-full bg-blue-100 text-blue-700 font-extrabold text-xs flex items-center justify-center ring-2 ring-white shadow-xs';
+        avatarEl.className = 'w-10 h-10 rounded-full bg-blue-600 text-white font-extrabold text-xs flex items-center justify-center ring-2 ring-white shadow-xs';
         authBtn.textContent = 'Đăng xuất';
         authBtn.onclick = logoutUser;
         authBtn.className = 'px-3.5 py-2 text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-xl transition-all';
@@ -291,39 +302,31 @@ function updateHeaderUserUI() {
         avatarEl.className = 'w-10 h-10 rounded-full bg-slate-100 text-slate-600 font-extrabold text-xs flex items-center justify-center ring-2 ring-white shadow-xs';
         authBtn.textContent = 'Đăng ký / Đăng nhập';
         authBtn.onclick = () => openAuthModal('login');
-        authBtn.className = 'px-3.5 py-2 text-xs font-bold text-white bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 rounded-xl shadow-xs transition-all';
+        authBtn.className = 'px-3.5 py-2 text-xs font-bold text-white bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 rounded-xl shadow-xs shadow-blue-500/20 transition-all';
     }
 
-    if (settingsNav) {
+    if (settingsBtn) {
         if (isAdmin()) {
-            settingsNav.classList.remove('hidden');
+            settingsBtn.classList.remove('hidden');
         } else {
-            settingsNav.classList.add('hidden');
+            settingsBtn.classList.add('hidden');
             if (currentPage === 'settings') currentPage = 'dashboard';
         }
     }
 }
 
-function destroyCharts() {
-    activeCharts.forEach(c => {
-        try { c.destroy(); } catch (e) {}
-    });
-    activeCharts = [];
-}
-
-// ============================================================================
-// 4. ĐIỀU HƯỚNG CÁC TRANG
-// ============================================================================
 function navigate(page) {
     if (page === 'settings' && !isAdmin()) {
-        showToast('Bạn không có quyền truy cập Cài đặt Hệ thống!', 'error');
         page = 'dashboard';
     }
     currentPage = page;
-    destroyCharts();
+
+    activeCharts.forEach(c => { try { c.destroy(); } catch (e) {} });
+    activeCharts = [];
 
     document.querySelectorAll('.nav-item').forEach(btn => {
-        if (btn.dataset.page === page) {
+        const active = btn.dataset.page === page;
+        if (active) {
             btn.classList.add('bg-blue-50', 'text-blue-700', 'font-extrabold');
             btn.classList.remove('text-slate-600', 'hover:bg-slate-50');
         } else {
@@ -332,9 +335,11 @@ function navigate(page) {
         }
     });
 
-    const sidebar = document.getElementById('sidebar');
-    if (window.innerWidth < 1024 && !sidebar.classList.contains('-translate-x-full')) {
-        toggleSidebar();
+    const sb = document.getElementById('sidebar');
+    const ov = document.getElementById('sidebar-overlay');
+    if (window.innerWidth < 1024 && sb && !sb.classList.contains('-translate-x-full')) {
+        sb.classList.add('-translate-x-full');
+        ov.classList.add('hidden');
     }
 
     const main = document.getElementById('main-content');
@@ -346,8 +351,7 @@ function navigate(page) {
     else if (page === 'reports') {
         main.innerHTML = renderReports();
         initReportCharts();
-    }
-    else if (page === 'settings') main.innerHTML = renderSettings();
+    } else if (page === 'settings') main.innerHTML = renderSettings();
 }
 
 // ============================================================================
@@ -355,6 +359,7 @@ function navigate(page) {
 // ============================================================================
 function renderDashboard() {
     const total = computers.length;
+    const pending = computers.filter(c => c.status === 'Chờ xử lý').length;
     const repairing = computers.filter(c => c.status === 'Đang sửa').length;
     const done = computers.filter(c => c.status === 'Sửa xong').length;
     const returned = computers.filter(c => c.status === 'Gửi trả chi nhánh').length;
@@ -381,10 +386,14 @@ function renderDashboard() {
         </div>
 
         <!-- KPI CARDS -->
-        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3.5">
+        <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
             <div class="card-elevated p-4 rounded-2xl">
                 <div class="text-[11px] font-bold text-slate-500 uppercase">Tổng thiết bị</div>
                 <div class="text-2xl font-extrabold text-slate-800 mt-1">${total}</div>
+            </div>
+            <div class="card-elevated p-4 rounded-2xl border-l-4 border-l-orange-500">
+                <div class="text-[11px] font-bold text-orange-700 uppercase">Chờ xử lý</div>
+                <div class="text-2xl font-extrabold text-orange-600 mt-1">${pending}</div>
             </div>
             <div class="card-elevated p-4 rounded-2xl border-l-4 border-l-amber-500">
                 <div class="text-[11px] font-bold text-amber-700 uppercase">Đang sửa</div>
@@ -469,7 +478,7 @@ function renderDashboard() {
 }
 
 // ============================================================================
-// 6. QUẢN LÝ MÁY TÍNH (TẬP TRUNG 5 NHÓM TRẠNG THÁI)
+// 6. QUẢN LÝ MÁY TÍNH (TẬP TRUNG CÁC NHÓM TRẠNG THÁI)
 // ============================================================================
 function renderComputers() {
     const countBy = (st) => computers.filter(c => c.status === st).length;
@@ -486,6 +495,7 @@ function renderComputers() {
     });
 
     const quickTabs = [
+        { label: '🟠 Chờ xử lý', status: 'Chờ xử lý', count: countBy('Chờ xử lý'), cls: 'bg-orange-50/70 border-orange-200 text-orange-800' },
         { label: '🟡 Đang sửa', status: 'Đang sửa', count: countBy('Đang sửa'), cls: 'bg-amber-50/70 border-amber-200 text-amber-800' },
         { label: '🟢 Sửa xong', status: 'Sửa xong', count: countBy('Sửa xong'), cls: 'bg-emerald-50/70 border-emerald-200 text-emerald-800' },
         { label: '🔵 Gửi trả chi nhánh', status: 'Gửi trả chi nhánh', count: countBy('Gửi trả chi nhánh'), cls: 'bg-blue-50/70 border-blue-200 text-blue-800' },
@@ -496,13 +506,13 @@ function renderComputers() {
     return `
         <div>
             <h2 class="text-xl font-extrabold text-slate-800">Danh sách Quản lý Máy tính</h2>
-            <p class="text-xs text-slate-500 mt-0.5">Quản lý tập trung các máy Đang sửa, Sửa xong, Gửi trả chi nhánh, Gửi nhà cung cấp và Thanh lý 3 miền</p>
+            <p class="text-xs text-slate-500 mt-0.5">Quản lý tập trung các máy Chờ xử lý, Đang sửa, Sửa xong, Gửi trả chi nhánh, Gửi nhà cung cấp và Thanh lý 3 miền</p>
         </div>
 
         <!-- THẺ LỌC NHANH -->
-        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5">
             ${quickTabs.map(t => `
-                <button onclick="setComputerStatusFilter('${t.status}')" class="p-3.5 rounded-2xl border ${t.cls} ${computerFilter.status === t.status ? 'ring-2 ring-blue-500' : ''} flex items-center justify-between transition-all text-left">
+                <button onclick="setComputerStatusFilter('${t.status}')" class="p-3 rounded-2xl border ${t.cls} ${computerFilter.status === t.status ? 'ring-2 ring-blue-500' : ''} flex items-center justify-between transition-all text-left">
                     <span class="text-xs font-extrabold">${t.label}</span>
                     <span class="text-base font-extrabold">${t.count}</span>
                 </button>
@@ -536,12 +546,13 @@ function renderComputers() {
                             <th class="py-3.5 px-4 font-bold">KHÁCH HÀNG</th>
                             <th class="py-3.5 px-4 font-bold">CHI NHÁNH</th>
                             <th class="py-3.5 px-4 font-bold">TÌNH TRẠNG</th>
-                            <th class="py-3.5 px-4 font-bold">NGÀY NHẬP</th>
+                            <th class="py-3.5 px-4 font-bold">NGÀY BÁO LỖI</th>
+                            <th class="py-3.5 px-4 font-bold">NGÀY SỬA XONG</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-slate-100">
                         ${filtered.length === 0 ? `
-                            <tr><td colspan="7" class="py-10 text-center text-slate-400">Không tìm thấy máy tính phù hợp.</td></tr>
+                            <tr><td colspan="8" class="py-10 text-center text-slate-400">Không tìm thấy máy tính phù hợp.</td></tr>
                         ` : filtered.map((c, idx) => `
                             <tr onclick="openComputerDetail('${c.id}')" class="hover:bg-slate-50 cursor-pointer transition-colors">
                                 <td class="py-3.5 px-4 text-slate-500 font-semibold">${idx + 1}</td>
@@ -550,7 +561,8 @@ function renderComputers() {
                                 <td class="py-3.5 px-4 text-slate-600">${c.customer || '—'}</td>
                                 <td class="py-3.5 px-4 text-slate-600">${c.region}</td>
                                 <td class="py-3.5 px-4">${getStatusBadge(c.status)}</td>
-                                <td class="py-3.5 px-4 text-slate-500">${c.createdAt || '—'}</td>
+                                <td class="py-3.5 px-4 text-slate-600 font-medium">${c.confirmDate || c.createdAt || '—'}</td>
+                                <td class="py-3.5 px-4 text-emerald-700 font-semibold">${c.doneDate || '—'}</td>
                             </tr>
                         `).join('')}
                     </tbody>
@@ -569,12 +581,17 @@ function setComputerStatusFilter(status) {
 // 7. DANH SÁCH MÁY ĐANG NHẬN VÀ SỬA
 // ============================================================================
 function renderRepairs() {
-    const activeMachines = computers.filter(c => c.status === 'Đang sửa' || c.status === 'Gửi nhà cung cấp' || c.status === 'Sửa xong');
+    const activeMachines = computers.filter(c => c.status === 'Chờ xử lý' || c.status === 'Đang sửa' || c.status === 'Gửi nhà cung cấp' || c.status === 'Sửa xong');
 
     return `
-        <div>
-            <h2 class="text-xl font-extrabold text-slate-800">Danh sách máy đang nhận và sửa</h2>
-            <p class="text-xs text-slate-500 mt-0.5">Theo dõi tiến độ sửa chữa, chi phí dự kiến và tình trạng lỗi</p>
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+                <h2 class="text-xl font-extrabold text-slate-800">Danh sách máy đang nhận và sửa</h2>
+                <p class="text-xs text-slate-500 mt-0.5">Theo dõi tiến độ sửa chữa, chi phí dự kiến và tình trạng lỗi</p>
+            </div>
+            <button onclick="openRepairSummaryModal()" class="px-4 py-2.5 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs shadow-xs transition-all flex items-center gap-2 self-start sm:self-auto">
+                <span>🔧</span> <span>Máy sửa</span>
+            </button>
         </div>
 
         <div class="card-elevated rounded-3xl overflow-hidden">
@@ -587,19 +604,21 @@ function renderRepairs() {
                             <th class="py-3.5 px-4 font-bold">CHI NHÁNH</th>
                             <th class="py-3.5 px-4 font-bold">TÌNH TRẠNG LỖI</th>
                             <th class="py-3.5 px-4 font-bold">CHI PHÍ DỰ KIẾN</th>
+                            <th class="py-3.5 px-4 font-bold">NGÀY SỬA XONG</th>
                             <th class="py-3.5 px-4 font-bold">TRẠNG THÁI</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-slate-100">
                         ${activeMachines.length === 0 ? `
-                            <tr><td colspan="6" class="py-10 text-center text-slate-400">Chưa có máy nào đang nhận sửa chữa.</td></tr>
+                            <tr><td colspan="7" class="py-10 text-center text-slate-400">Chưa có máy nào đang nhận sửa chữa.</td></tr>
                         ` : activeMachines.map(c => `
                             <tr onclick="openComputerDetail('${c.id}')" class="hover:bg-slate-50 cursor-pointer transition-colors">
                                 <td class="py-3.5 px-4 font-extrabold text-blue-600">${c.code} <span class="text-slate-400 font-normal">(${c.model})</span></td>
                                 <td class="py-3.5 px-4 text-slate-700">${c.customer || '—'}</td>
                                 <td class="py-3.5 px-4 text-slate-600">${c.region}</td>
-                                <td class="py-3.5 px-4 text-slate-700">${c.issue || '—'}</td>
+                                <td class="py-3.5 px-4 text-slate-700 max-w-xs truncate">${c.issue || '—'}</td>
                                 <td class="py-3.5 px-4 font-bold text-slate-800">${formatMoney(c.cost)}</td>
+                                <td class="py-3.5 px-4 text-emerald-700 font-semibold">${c.doneDate || '—'}</td>
                                 <td class="py-3.5 px-4">${getStatusBadge(c.status)}</td>
                             </tr>
                         `).join('')}
@@ -610,21 +629,86 @@ function renderRepairs() {
     `;
 }
 
+function openRepairSummaryModal() {
+    const repairingList = computers.filter(c => c.status === 'Đang sửa' || c.status === 'Chờ xử lý' || c.status === 'Gửi nhà cung cấp');
+    const totalEstCost = repairingList.reduce((sum, c) => sum + (Number(c.cost) || 0), 0);
+
+    openModal('🔧 Thông tin Máy sửa', `
+        <div class="space-y-4 text-xs">
+            <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                <div class="p-3.5 rounded-2xl bg-amber-50 border border-amber-200">
+                    <div class="text-[11px] font-bold text-amber-700 uppercase">Đang sửa / Chờ xử lý</div>
+                    <div class="text-xl font-extrabold text-amber-800 mt-1">${repairingList.length} máy</div>
+                </div>
+                <div class="p-3.5 rounded-2xl bg-blue-50 border border-blue-200">
+                    <div class="text-[11px] font-bold text-blue-700 uppercase">Tổng chi phí dự kiến</div>
+                    <div class="text-base font-extrabold text-blue-800 mt-1">${formatMoney(totalEstCost)}</div>
+                </div>
+                <div class="p-3.5 rounded-2xl bg-emerald-50 border border-emerald-200 col-span-2 sm:col-span-1">
+                    <div class="text-[11px] font-bold text-emerald-700 uppercase">Đã sửa xong</div>
+                    <div class="text-xl font-extrabold text-emerald-800 mt-1">${computers.filter(c => c.status === 'Sửa xong').length} máy</div>
+                </div>
+            </div>
+
+            <div class="space-y-2">
+                <div class="flex items-center justify-between">
+                    <span class="font-extrabold text-slate-700">Chi tiết các máy đang tiếp nhận sửa chữa</span>
+                    ${isAdmin() ? `<button type="button" onclick="openFaultyInputModal()" class="px-3 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-bold">+ Thêm máy sửa</button>` : ''}
+                </div>
+
+                ${repairingList.length === 0 ? `
+                    <div class="p-8 text-center rounded-2xl bg-slate-50 border border-slate-100 text-slate-400">
+                        Hiện chưa có máy nào đang trong quá trình sửa chữa.
+                    </div>
+                ` : `
+                    <div class="space-y-2 max-h-72 overflow-y-auto pr-1">
+                        ${repairingList.map(c => `
+                            <div onclick="openComputerDetail('${c.id}')" class="p-3.5 rounded-2xl border border-slate-200 hover:border-blue-400 hover:bg-blue-50/30 cursor-pointer transition-all space-y-1.5">
+                                <div class="flex items-center justify-between">
+                                    <div>
+                                        <span class="font-extrabold text-blue-600 text-sm">#${c.code}</span>
+                                        <span class="font-bold text-slate-700 ml-1">(${c.model})</span>
+                                        <span class="text-slate-400 mx-1">•</span>
+                                        <span class="text-slate-600 font-semibold">${c.region}</span>
+                                    </div>
+                                    ${getStatusBadge(c.status)}
+                                </div>
+                                <div class="text-slate-600"><span class="font-semibold text-slate-500">Lỗi:</span> ${c.issue || '—'}</div>
+                                <div class="flex flex-wrap items-center justify-between gap-2 text-[11px] text-slate-500 pt-1 border-t border-slate-100">
+                                    <span>Khách: <strong class="text-slate-700">${c.customer || '—'}</strong></span>
+                                    <span>IT xử lý: <strong class="text-slate-700">${c.technician || '—'}</strong></span>
+                                    <span>Chi phí: <strong class="text-slate-800">${formatMoney(c.cost)}</strong></span>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                `}
+            </div>
+
+            <div class="pt-2 border-t border-slate-100 flex justify-end">
+                <button type="button" onclick="closeModal()" class="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold">Đóng</button>
+            </div>
+        </div>
+    `);
+}
+
 // ============================================================================
 // 8. NHẬP MÁY LỖI & CHI TIẾT / CẬP NHẬT MÁY
 // ============================================================================
 function openFaultyInputModal() {
     if (!requireAdmin()) return;
+    const today = new Date().toISOString().split('T')[0];
+
     openModal('⚠️ Nhập Máy Lỗi / Tiếp Nhận Xử Lý', `
         <form onsubmit="submitFaultyMachine(event)" class="space-y-4 text-xs">
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                 <div>
                     <label class="block font-bold text-slate-700 mb-1">Mã số máy (tối đa 5 số) *</label>
-                    <input type="text" id="fm-code" required maxlength="5" oninput="this.value=this.value.replace(/[^0-9]/g,'').slice(0,5)" placeholder="VD: 10245" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-blue-500 font-bold">
+                    <input type="text" id="fm-code" required maxlength="5" inputmode="numeric" pattern="[0-9]{1,5}" oninput="this.value = this.value.replace(/[^0-9]/g, '').slice(0, 5)" placeholder="VD: 10245" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-blue-500">
                 </div>
                 <div>
                     <label class="block font-bold text-slate-700 mb-1">Loại máy *</label>
-                    <select id="fm-model" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500 font-bold">
+                    <select id="fm-model" required class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white font-semibold focus:outline-none focus:border-blue-500">
                         <option value="HP">HP</option>
                         <option value="LENOVO">LENOVO</option>
                     </select>
@@ -638,7 +722,7 @@ function openFaultyInputModal() {
                 </div>
                 <div>
                     <label class="block font-bold text-slate-700 mb-1">Chi nhánh *</label>
-                    <select id="fm-region" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500 font-semibold">
+                    <select id="fm-region" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white font-semibold focus:outline-none focus:border-blue-500">
                         <option value="Miền Bắc">Miền Bắc</option>
                         <option value="Miền Trung">Miền Trung</option>
                         <option value="Miền Nam">Miền Nam</option>
@@ -646,33 +730,45 @@ function openFaultyInputModal() {
                 </div>
             </div>
 
-            <div>
-                <label class="block font-bold text-slate-700 mb-1">Tình trạng lỗi *</label>
-                <input type="text" id="fm-issue" required placeholder="VD: Hỏng pin, không nhận sạc, lỗi bàn phím..." class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-blue-500">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                <div>
+                    <label class="block font-bold text-slate-700 mb-1">Tình trạng lỗi *</label>
+                    <input type="text" id="fm-issue" required placeholder="VD: Hỏng pin, không nhận sạc, lỗi bàn phím..." class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-blue-500">
+                </div>
+                <div>
+                    <label class="block font-bold text-slate-700 mb-1">Ngày xác nhận lỗi</label>
+                    <input type="date" id="fm-confirm-date" value="${today}" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-blue-500">
+                </div>
             </div>
 
-            <div>
-                <label class="block font-bold text-slate-700 mb-1">Ghi chú</label>
-                <input type="text" id="fm-note" placeholder="Nhập ghi chú thêm (nếu có)..." class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-blue-500">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                <div>
+                    <label class="block font-bold text-slate-700 mb-1">Ghi chú</label>
+                    <input type="text" id="fm-note" placeholder="Nhập ghi chú thêm (nếu có)..." class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-blue-500">
+                </div>
+                <div>
+                    <label class="block font-bold text-slate-700 mb-1">Ngày sửa xong</label>
+                    <input type="date" id="fm-done-date" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-blue-500">
+                </div>
             </div>
 
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                 <div>
                     <label class="block font-bold text-slate-700 mb-1">Chi phí dự kiến (VND)</label>
-                    <input type="number" id="fm-cost" min="0" step="1000" placeholder="500000" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-blue-500">
+                    <input type="text" id="fm-cost" inputmode="numeric" oninput="formatMoneyInput(this)" placeholder="500.000" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-blue-500">
                 </div>
                 <div>
                     <label class="block font-bold text-slate-700 mb-1">IT xử lý</label>
-                    <select id="fm-tech" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500 font-semibold">
+                    <select id="fm-tech" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white font-semibold focus:outline-none focus:border-blue-500">
                         <option value="Bắc IT">Bắc IT</option>
                         <option value="Bình IT">Bình IT</option>
                     </select>
                 </div>
             </div>
 
-            <div class="pt-3 border-t border-slate-100 flex justify-end gap-2.5">
+            <div class="pt-3 border-t border-slate-100 flex justify-end gap-2">
                 <button type="button" onclick="closeModal()" class="px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold">Hủy</button>
-                <button type="submit" class="px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-extrabold shadow-xs">Lưu</button>
+                <button type="submit" class="px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-extrabold shadow-sm">Lưu</button>
             </div>
         </form>
     `);
@@ -684,139 +780,192 @@ function submitFaultyMachine(e) {
 
     const code = document.getElementById('fm-code').value.trim();
     if (!/^\d{1,5}$/.test(code)) {
-        showToast('Mã số máy chỉ được gồm tối đa 5 chữ số!', 'error');
+        showToast('Mã số máy phải từ 1 đến 5 chữ số!', 'error');
         return;
     }
 
-    const newItem = {
-        id: 'PC-' + Date.now(),
-        code,
-        model: document.getElementById('fm-model').value,
-        customer: document.getElementById('fm-customer').value.trim(),
-        region: document.getElementById('fm-region').value,
-        issue: document.getElementById('fm-issue').value.trim(),
-        note: document.getElementById('fm-note').value.trim(),
-        cost: Number(document.getElementById('fm-cost').value) || 0,
-        technician: document.getElementById('fm-tech').value,
-        status: 'Đang sửa',
-        createdAt: new Date().toISOString().split('T')[0]
-    };
+    const model = document.getElementById('fm-model').value;
+    const customer = document.getElementById('fm-customer').value.trim();
+    const region = document.getElementById('fm-region').value;
+    const technician = document.getElementById('fm-tech').value;
+    const cost = parseMoneyInput(document.getElementById('fm-cost').value);
+    const issue = document.getElementById('fm-issue').value.trim();
+    const confirmDate = document.getElementById('fm-confirm-date').value || new Date().toISOString().split('T')[0];
+    const doneDate = document.getElementById('fm-done-date').value || '';
+    const note = document.getElementById('fm-note').value.trim();
 
-    computers.push(newItem);
-    saveState();
-    showToast(`Đã lưu tiếp nhận máy ${code} (${newItem.model})!`, 'success');
+    const existingIdx = computers.findIndex(c => c.code.toLowerCase() === code.toLowerCase());
+    if (existingIdx !== -1) {
+        computers[existingIdx].model = model;
+        computers[existingIdx].customer = customer || computers[existingIdx].customer;
+        computers[existingIdx].region = region;
+        computers[existingIdx].status = 'Chờ xử lý';
+        computers[existingIdx].issue = issue;
+        computers[existingIdx].confirmDate = confirmDate;
+        computers[existingIdx].doneDate = doneDate;
+        computers[existingIdx].note = note;
+        computers[existingIdx].cost = cost;
+        computers[existingIdx].technician = technician;
+    } else {
+        computers.push({
+            id: 'COMP-' + Date.now(),
+            code,
+            model,
+            customer,
+            region,
+            status: 'Chờ xử lý',
+            issue,
+            confirmDate,
+            doneDate,
+            note,
+            cost,
+            technician,
+            createdAt: confirmDate
+        });
+    }
+
+    saveData();
     closeModal();
+    showToast(`Đã tiếp nhận máy lỗi ${code} (${model}) - Chờ xử lý`);
     navigate(currentPage);
 }
 
 function openComputerDetail(id) {
-    const c = computers.find(item => item.id === id);
-    if (!c) return;
+    const comp = computers.find(c => c.id === id);
+    if (!comp) return;
 
-    const editable = isAdmin();
-    openModal(`💻 Chi tiết Máy #${c.code} (${c.model})`, `
+    const adminMode = isAdmin();
+    const formattedCost = Number(comp.cost) > 0 ? Number(comp.cost).toLocaleString('vi-VN') : '';
+
+    openModal(`Chi tiết Thiết bị: ${comp.code}`, `
         <div class="space-y-4 text-xs">
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-                <div>
-                    <label class="block font-bold text-slate-600 mb-1">Mã số máy (tối đa 5 số)</label>
-                    <input type="text" id="det-code" value="${c.code}" maxlength="5" ${editable ? '' : 'disabled'} oninput="this.value=this.value.replace(/[^0-9]/g,'').slice(0,5)" class="w-full px-3.5 py-2 rounded-xl border border-slate-200 font-bold disabled:bg-slate-50">
-                </div>
-                <div>
-                    <label class="block font-bold text-slate-600 mb-1">Loại máy</label>
-                    <select id="det-model" ${editable ? '' : 'disabled'} class="w-full px-3.5 py-2 rounded-xl border border-slate-200 bg-white font-bold disabled:bg-slate-50">
-                        <option value="HP" ${c.model==='HP'?'selected':''}>HP</option>
-                        <option value="LENOVO" ${c.model==='LENOVO'?'selected':''}>LENOVO</option>
-                    </select>
-                </div>
-                <div>
-                    <label class="block font-bold text-slate-600 mb-1">Tên khách hàng</label>
-                    <input type="text" id="det-customer" value="${c.customer || ''}" ${editable ? '' : 'disabled'} class="w-full px-3.5 py-2 rounded-xl border border-slate-200 disabled:bg-slate-50">
-                </div>
-                <div>
-                    <label class="block font-bold text-slate-600 mb-1">Chi nhánh</label>
-                    <select id="det-region" ${editable ? '' : 'disabled'} class="w-full px-3.5 py-2 rounded-xl border border-slate-200 bg-white disabled:bg-slate-50">
-                        <option value="Miền Bắc" ${c.region==='Miền Bắc'?'selected':''}>Miền Bắc</option>
-                        <option value="Miền Trung" ${c.region==='Miền Trung'?'selected':''}>Miền Trung</option>
-                        <option value="Miền Nam" ${c.region==='Miền Nam'?'selected':''}>Miền Nam</option>
-                    </select>
-                </div>
-                <div>
-                    <label class="block font-bold text-slate-600 mb-1">Trạng thái xử lý</label>
-                    <select id="det-status" ${editable ? '' : 'disabled'} class="w-full px-3.5 py-2 rounded-xl border border-slate-200 bg-white font-bold disabled:bg-slate-50">
-                        ${MANAGED_STATUSES.map(st => `<option value="${st}" ${c.status===st?'selected':''}>${st}</option>`).join('')}
-                    </select>
-                </div>
-                <div>
-                    <label class="block font-bold text-slate-600 mb-1">IT xử lý</label>
-                    <select id="det-tech" ${editable ? '' : 'disabled'} class="w-full px-3.5 py-2 rounded-xl border border-slate-200 bg-white disabled:bg-slate-50">
-                        <option value="Bắc IT" ${c.technician==='Bắc IT'?'selected':''}>Bắc IT</option>
-                        <option value="Bình IT" ${c.technician==='Bình IT'?'selected':''}>Bình IT</option>
-                    </select>
-                </div>
-                <div class="sm:col-span-2">
-                    <label class="block font-bold text-slate-600 mb-1">Chi phí dự kiến (VND)</label>
-                    <input type="number" id="det-cost" value="${c.cost || 0}" ${editable ? '' : 'disabled'} class="w-full px-3.5 py-2 rounded-xl border border-slate-200 disabled:bg-slate-50">
-                </div>
-                <div class="sm:col-span-2">
-                    <label class="block font-bold text-slate-600 mb-1">Tình trạng lỗi</label>
-                    <input type="text" id="det-issue" value="${c.issue || ''}" ${editable ? '' : 'disabled'} class="w-full px-3.5 py-2 rounded-xl border border-slate-200 disabled:bg-slate-50">
-                </div>
-                <div class="sm:col-span-2">
-                    <label class="block font-bold text-slate-600 mb-1">Ghi chú</label>
-                    <input type="text" id="det-note" value="${c.note || ''}" ${editable ? '' : 'disabled'} class="w-full px-3.5 py-2 rounded-xl border border-slate-200 disabled:bg-slate-50">
-                </div>
+            <div class="p-4 rounded-2xl bg-slate-50 border border-slate-100 grid grid-cols-2 gap-3">
+                <div><span class="text-slate-400 block">Mã số máy</span><strong class="text-slate-800 text-sm">${comp.code}</strong></div>
+                <div><span class="text-slate-400 block">Loại máy</span><strong class="text-slate-800">${comp.model}</strong></div>
+                <div><span class="text-slate-400 block">Tên khách hàng</span><strong class="text-slate-800">${comp.customer || '—'}</strong></div>
+                <div><span class="text-slate-400 block">Chi nhánh</span><strong class="text-slate-800">${comp.region}</strong></div>
+                <div><span class="text-slate-400 block">Ngày báo lỗi</span><strong class="text-slate-800">${comp.confirmDate || comp.createdAt || '—'}</strong></div>
+                <div><span class="text-slate-400 block">Ngày sửa xong</span><strong class="text-emerald-700">${comp.doneDate || '—'}</strong></div>
+                <div><span class="text-slate-400 block">IT xử lý</span><strong class="text-slate-800">${comp.technician || '—'}</strong></div>
+                <div><span class="text-slate-400 block">Chi phí dự kiến</span><strong class="text-slate-800">${formatMoney(comp.cost)}</strong></div>
             </div>
 
-            ${editable ? `
-                <div class="pt-3 border-t border-slate-100 flex items-center justify-between gap-2">
-                    <button onclick="deleteComputer('${c.id}')" class="px-3.5 py-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-600 font-bold">🗑️ Xóa máy</button>
-                    <div class="flex gap-2">
-                        <button onclick="closeModal()" class="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold">Đóng</button>
-                        <button onclick="saveComputerDetail('${c.id}')" class="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-extrabold">Lưu thay đổi</button>
+            ${adminMode ? `
+                <form onsubmit="saveComputerDetail(event, '${comp.id}')" class="space-y-3 pt-2 border-t border-slate-100">
+                    <div class="font-extrabold text-slate-700">Cập nhật Trạng thái & Thông tin Xử lý</div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                            <label class="block font-bold text-slate-600 mb-1">Trạng thái thiết bị</label>
+                            <select id="ed-status" onchange="if(this.value==='Sửa xong' && !document.getElementById('ed-done-date').value) document.getElementById('ed-done-date').value=new Date().toISOString().split('T')[0]" class="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white font-bold">
+                                ${MANAGED_STATUSES.map(st => `<option value="${st}" ${comp.status === st ? 'selected' : ''}>${st}</option>`).join('')}
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block font-bold text-slate-600 mb-1">Loại máy</label>
+                            <select id="ed-model" class="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white font-semibold">
+                                <option value="HP" ${comp.model === 'HP' ? 'selected' : ''}>HP</option>
+                                <option value="LENOVO" ${comp.model === 'LENOVO' ? 'selected' : ''}>LENOVO</option>
+                            </select>
+                        </div>
                     </div>
-                </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                            <label class="block font-bold text-slate-600 mb-1">Tên khách hàng</label>
+                            <input type="text" id="ed-customer" value="${comp.customer || ''}" placeholder="Không bắt buộc..." class="w-full px-3 py-2 rounded-xl border border-slate-200">
+                        </div>
+                        <div>
+                            <label class="block font-bold text-slate-600 mb-1">Chi nhánh</label>
+                            <select id="ed-region" class="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white font-semibold">
+                                <option value="Miền Bắc" ${comp.region === 'Miền Bắc' ? 'selected' : ''}>Miền Bắc</option>
+                                <option value="Miền Trung" ${comp.region === 'Miền Trung' ? 'selected' : ''}>Miền Trung</option>
+                                <option value="Miền Nam" ${comp.region === 'Miền Nam' ? 'selected' : ''}>Miền Nam</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                            <label class="block font-bold text-slate-600 mb-1">IT xử lý</label>
+                            <select id="ed-tech" class="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white font-semibold">
+                                <option value="Bắc IT" ${comp.technician === 'Bắc IT' ? 'selected' : ''}>Bắc IT</option>
+                                <option value="Bình IT" ${comp.technician === 'Bình IT' ? 'selected' : ''}>Bình IT</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block font-bold text-slate-600 mb-1">Chi phí dự kiến (VND)</label>
+                            <input type="text" id="ed-cost" inputmode="numeric" oninput="formatMoneyInput(this)" value="${formattedCost}" placeholder="500.000" class="w-full px-3 py-2 rounded-xl border border-slate-200">
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                            <label class="block font-bold text-slate-600 mb-1">Tình trạng lỗi</label>
+                            <input type="text" id="ed-issue" value="${comp.issue || ''}" class="w-full px-3 py-2 rounded-xl border border-slate-200">
+                        </div>
+                        <div>
+                            <label class="block font-bold text-slate-600 mb-1">Ngày báo lỗi</label>
+                            <input type="date" id="ed-confirm-date" value="${comp.confirmDate || comp.createdAt || ''}" class="w-full px-3 py-2 rounded-xl border border-slate-200">
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                            <label class="block font-bold text-slate-600 mb-1">Ghi chú</label>
+                            <input type="text" id="ed-note" value="${comp.note || ''}" placeholder="Nhập ghi chú..." class="w-full px-3 py-2 rounded-xl border border-slate-200">
+                        </div>
+                        <div>
+                            <label class="block font-bold text-slate-600 mb-1">Ngày sửa xong</label>
+                            <input type="date" id="ed-done-date" value="${comp.doneDate || ''}" class="w-full px-3 py-2 rounded-xl border border-slate-200">
+                        </div>
+                    </div>
+                    <div class="flex items-center justify-between pt-3 border-t border-slate-100">
+                        <button type="button" onclick="deleteComputer('${comp.id}')" class="px-3.5 py-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-600 font-bold">🗑️ Xóa máy</button>
+                        <div class="flex gap-2">
+                            <button type="button" onclick="closeModal()" class="px-4 py-2 rounded-xl bg-slate-100 text-slate-700 font-bold">Đóng</button>
+                            <button type="submit" class="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-extrabold">Lưu cập nhật</button>
+                        </div>
+                    </div>
+                </form>
             ` : `
-                <div class="pt-3 border-t border-slate-100 text-right">
-                    <button onclick="closeModal()" class="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold">Đóng</button>
+                <div class="p-3 rounded-xl bg-slate-50 text-slate-600 space-y-1">
+                    <div><span class="font-bold">Tình trạng lỗi:</span> ${comp.issue || 'Không có ghi nhận lỗi'}</div>
+                    <div><span class="font-bold">Ghi chú:</span> ${comp.note || '—'}</div>
+                </div>
+                <div class="flex justify-end">
+                    <button type="button" onclick="closeModal()" class="px-4 py-2 rounded-xl bg-slate-100 text-slate-700 font-bold">Đóng</button>
                 </div>
             `}
         </div>
     `);
 }
 
-function saveComputerDetail(id) {
+function saveComputerDetail(e, id) {
+    e.preventDefault();
     if (!requireAdmin()) return;
-    const c = computers.find(item => item.id === id);
-    if (!c) return;
 
-    const code = document.getElementById('det-code').value.trim();
-    if (!/^\d{1,5}$/.test(code)) {
-        showToast('Mã số máy chỉ được gồm tối đa 5 chữ số!', 'error');
-        return;
-    }
+    const comp = computers.find(c => c.id === id);
+    if (!comp) return;
 
-    c.code = code;
-    c.model = document.getElementById('det-model').value;
-    c.customer = document.getElementById('det-customer').value.trim();
-    c.region = document.getElementById('det-region').value;
-    c.status = document.getElementById('det-status').value;
-    c.technician = document.getElementById('det-tech').value;
-    c.cost = Number(document.getElementById('det-cost').value) || 0;
-    c.issue = document.getElementById('det-issue').value.trim();
-    c.note = document.getElementById('det-note').value.trim();
+    comp.status = document.getElementById('ed-status').value;
+    comp.model = document.getElementById('ed-model').value;
+    comp.customer = document.getElementById('ed-customer').value.trim();
+    comp.region = document.getElementById('ed-region').value;
+    comp.technician = document.getElementById('ed-tech').value;
+    comp.cost = parseMoneyInput(document.getElementById('ed-cost').value);
+    comp.issue = document.getElementById('ed-issue').value.trim();
+    comp.confirmDate = document.getElementById('ed-confirm-date').value;
+    comp.note = document.getElementById('ed-note').value.trim();
+    comp.doneDate = document.getElementById('ed-done-date').value;
 
-    saveState();
-    showToast(`Đã cập nhật thông tin máy #${c.code}!`, 'success');
+    saveData();
     closeModal();
+    showToast(`Đã cập nhật thông tin máy ${comp.code}`);
     navigate(currentPage);
 }
 
 function deleteComputer(id) {
     if (!requireAdmin()) return;
     computers = computers.filter(c => c.id !== id);
-    saveState();
-    showToast('Đã xóa thiết bị khỏi danh sách!', 'info');
+    saveData();
     closeModal();
+    showToast('Đã xóa thiết bị khỏi hệ thống', 'info');
     navigate(currentPage);
 }
 
@@ -827,34 +976,33 @@ function renderRegions() {
     const regions = ['Miền Bắc', 'Miền Trung', 'Miền Nam'];
     return `
         <div>
-            <h2 class="text-xl font-extrabold text-slate-800">Điều phối & Hạ tầng 3 Miền</h2>
-            <p class="text-xs text-slate-500 mt-0.5">Thông tin chi nhánh, đầu mối kỹ thuật và số lượng thiết bị tại từng khu vực</p>
+            <h2 class="text-xl font-extrabold text-slate-800">Điều phối Thiết bị 3 Miền</h2>
+            <p class="text-xs text-slate-500 mt-0.5">Địa chỉ chi nhánh và phụ trách kỹ thuật IT tại từng khu vực</p>
         </div>
 
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
             ${regions.map(reg => {
-                const items = computers.filter(c => c.region === reg);
+                const list = computers.filter(c => c.region === reg);
                 return `
                     <div class="card-elevated p-5 rounded-3xl flex flex-col justify-between space-y-4">
-                        <div class="space-y-2.5">
+                        <div class="space-y-3">
                             <div class="flex items-center justify-between">
-                                <h3 class="font-extrabold text-base text-slate-800">🏢 ${reg}</h3>
-                                <span class="px-3 py-1 rounded-full bg-blue-50 text-blue-700 text-xs font-extrabold">${items.length} thiết bị</span>
+                                <span class="text-base font-extrabold text-slate-800">🏢 ${reg}</span>
+                                <span class="px-3 py-1 rounded-full bg-blue-600 text-white text-xs font-extrabold">${list.length} thiết bị</span>
                             </div>
-                            <div class="p-3 rounded-2xl bg-slate-50 text-xs text-slate-600 space-y-1">
+                            <div class="p-3 rounded-2xl bg-slate-50 border border-slate-100 text-xs space-y-1.5">
                                 <div class="font-bold text-slate-700">Địa chỉ chi nhánh:</div>
-                                <div>${REGION_INFO[reg].branches[0]}</div>
+                                <div class="text-slate-600 leading-relaxed">${REGION_INFO[reg].branches[0]}</div>
                             </div>
                             <div class="text-xs text-slate-600">
-                                <span class="font-bold text-slate-700">IT phụ trách:</span> ${REGION_INFO[reg].itManager}
+                                <span class="font-bold text-slate-700">Phụ trách IT:</span> ${REGION_INFO[reg].itManager}
                             </div>
                         </div>
 
-                        <div class="pt-3 border-t border-slate-100 grid grid-cols-2 gap-2 text-xs">
-                            <div class="p-2.5 rounded-xl bg-amber-50/70 text-amber-800 font-bold">Đang sửa: ${items.filter(i=>i.status==='Đang sửa').length}</div>
-                            <div class="p-2.5 rounded-xl bg-emerald-50/70 text-emerald-800 font-bold">Sửa xong: ${items.filter(i=>i.status==='Sửa xong').length}</div>
-                            <div class="p-2.5 rounded-xl bg-blue-50/70 text-blue-800 font-bold">Gửi trả CN: ${items.filter(i=>i.status==='Gửi trả chi nhánh').length}</div>
-                            <div class="p-2.5 rounded-xl bg-purple-50/70 text-purple-800 font-bold">Gửi NCC: ${items.filter(i=>i.status==='Gửi nhà cung cấp').length}</div>
+                        <div class="pt-3 border-t border-slate-100 grid grid-cols-3 gap-2 text-center text-[11px]">
+                            <div class="p-2 rounded-xl bg-orange-50 text-orange-800 font-bold">Chờ xử lý<div class="text-sm font-extrabold">${list.filter(c => c.status === 'Chờ xử lý').length}</div></div>
+                            <div class="p-2 rounded-xl bg-amber-50 text-amber-800 font-bold">Đang sửa<div class="text-sm font-extrabold">${list.filter(c => c.status === 'Đang sửa').length}</div></div>
+                            <div class="p-2 rounded-xl bg-emerald-50 text-emerald-800 font-bold">Sửa xong<div class="text-sm font-extrabold">${list.filter(c => c.status === 'Sửa xong').length}</div></div>
                         </div>
                     </div>
                 `;
@@ -864,19 +1012,17 @@ function renderRegions() {
 }
 
 // ============================================================================
-// 10. QUẢN LÝ THÀNH VIÊN (CHỈ QUẢN TRỊ VIÊN XEM & THÊM/XÓA)
+// 10. QUẢN LÝ THÀNH VIÊN (CHỈ QUẢN TRỊ VIÊN MỚI XEM ĐƯỢC)
 // ============================================================================
 function renderEmployees() {
     if (!isAdmin()) {
         return `
-            <div class="card-elevated p-10 rounded-3xl text-center space-y-3 max-w-lg mx-auto my-8">
-                <div class="text-4xl">🔒</div>
-                <h2 class="text-lg font-extrabold text-slate-800">Khu vực dành riêng cho Quản trị viên</h2>
-                <p class="text-xs text-slate-500 leading-relaxed">
-                    Chỉ tài khoản có quyền <strong>Quản trị viên</strong> sau khi đăng nhập mới có thể xem danh sách thành viên hệ thống, thêm mới hoặc xóa tài khoản.
-                </p>
+            <div class="card-elevated p-10 rounded-3xl text-center max-w-lg mx-auto my-8 space-y-3">
+                <div class="text-3xl">🔒</div>
+                <h2 class="text-lg font-extrabold text-slate-800">Giới hạn quyền truy cập</h2>
+                <p class="text-xs text-slate-500">Chỉ tài khoản <strong>Quản trị viên</strong> mới có quyền xem danh sách các thành viên hệ thống và quản lý tài khoản.</p>
                 <div class="pt-2">
-                    <button onclick="openAuthModal('login')" class="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-extrabold">
+                    <button onclick="openAuthModal('login')" class="px-5 py-2.5 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-extrabold">
                         Đăng nhập Quản trị viên
                     </button>
                 </div>
@@ -890,7 +1036,7 @@ function renderEmployees() {
                 <h2 class="text-xl font-extrabold text-slate-800">Danh sách Thành viên Hệ thống</h2>
                 <p class="text-xs text-slate-500 mt-0.5">Hiển thị toàn bộ tài khoản thành viên và quản trị viên đã đăng ký trên hệ thống</p>
             </div>
-            <button onclick="openManageAccountsModal()" class="px-4 py-2.5 rounded-2xl bg-rose-600 hover:bg-rose-700 text-white font-extrabold text-xs shadow-xs transition-all self-start flex items-center gap-2">
+            <button onclick="openManageAccountsModal()" class="px-4 py-2.5 rounded-2xl bg-rose-600 hover:bg-rose-700 text-white font-extrabold text-xs shadow-xs transition-all flex items-center gap-2 self-start">
                 <span>👤</span> <span>XOÁ / THÊM TÀI KHOẢN</span>
             </button>
         </div>
@@ -915,7 +1061,7 @@ function renderEmployees() {
                                     <div class="text-[11px] text-slate-400">@${emp.username}</div>
                                 </td>
                                 <td class="py-3.5 px-4">
-                                    <span class="px-2.5 py-1 rounded-full text-[11px] font-bold border ${emp.role==='Quản trị viên' ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-slate-100 text-slate-700 border-slate-200'}">
+                                    <span class="px-2.5 py-1 rounded-full text-[11px] font-bold border ${emp.role === 'Quản trị viên' ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-slate-100 text-slate-700 border-slate-200'}">
                                         ${emp.role}
                                     </span>
                                 </td>
@@ -934,127 +1080,143 @@ function renderEmployees() {
 function openManageAccountsModal() {
     if (!requireAdmin()) return;
 
-    openModal('👤 Quản lý Thêm / Chỉnh sửa / Xóa Tài khoản', `
-        <div class="space-y-4 text-xs">
-            <!-- THÊM TÀI KHOẢN MỚI -->
-            <form onsubmit="adminAddAccount(event)" class="p-3.5 rounded-2xl border border-emerald-200 bg-emerald-50/40 space-y-2.5">
-                <div class="font-extrabold text-emerald-800">➕ Thêm tài khoản mới</div>
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                    <input type="text" id="admin-add-name" required placeholder="Họ và tên hiển thị *" class="px-2.5 py-2 rounded-xl border border-slate-300 bg-white font-semibold">
-                    <input type="text" id="admin-add-username" required placeholder="Tên đăng nhập *" class="px-2.5 py-2 rounded-xl border border-slate-300 bg-white">
-                    <input type="password" id="admin-add-password" required placeholder="Mật khẩu *" class="px-2.5 py-2 rounded-xl border border-slate-300 bg-white">
-                    <select id="admin-add-role" class="px-2.5 py-2 rounded-xl border border-slate-300 bg-white font-semibold">
+    openModal('👤 Quản lý Tài khoản Thành viên', `
+        <div class="space-y-5 text-xs">
+            <form onsubmit="adminAddAccount(event)" class="p-4 rounded-2xl bg-emerald-50/70 border border-emerald-200 space-y-3">
+                <div class="font-extrabold text-emerald-900">➕ Thêm tài khoản mới</div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                    <input type="text" id="adm-new-name" required placeholder="Họ và tên hiển thị *" class="px-3 py-2 rounded-xl border border-slate-200 bg-white">
+                    <input type="text" id="adm-new-username" required placeholder="Tên đăng nhập *" class="px-3 py-2 rounded-xl border border-slate-200 bg-white">
+                    <input type="password" id="adm-new-password" required placeholder="Mật khẩu *" class="px-3 py-2 rounded-xl border border-slate-200 bg-white">
+                    <select id="adm-new-role" class="px-3 py-2 rounded-xl border border-slate-200 bg-white font-semibold">
                         <option value="Thành viên">Thành viên (Chỉ xem)</option>
-                        <option value="Quản trị viên">Quản trị viên (Toàn quyền)</option>
+                        <option value="Quản trị viên">Quản trị viên</option>
                     </select>
-                    <select id="admin-add-region" class="px-2.5 py-2 rounded-xl border border-slate-300 bg-white">
+                    <select id="adm-new-region" class="px-3 py-2 rounded-xl border border-slate-200 bg-white font-semibold">
                         <option value="Miền Bắc">Miền Bắc</option>
                         <option value="Miền Trung">Miền Trung</option>
                         <option value="Miền Nam">Miền Nam</option>
                     </select>
-                    <input type="text" id="admin-add-phone" placeholder="Số điện thoại" class="px-2.5 py-2 rounded-xl border border-slate-300 bg-white">
-                    <button type="submit" class="sm:col-span-2 px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold shadow-xs">
-                        + Thêm tài khoản
-                    </button>
+                    <input type="text" id="adm-new-phone" placeholder="Số điện thoại" class="px-3 py-2 rounded-xl border border-slate-200 bg-white">
+                </div>
+                <div class="flex justify-end">
+                    <button type="submit" class="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold">+ Thêm tài khoản</button>
                 </div>
             </form>
 
-            <!-- DANH SÁCH CHỈNH SỬA / XÓA TÀI KHOẢN -->
-            <div class="space-y-2.5 max-h-72 overflow-y-auto pr-1">
+            <div class="space-y-2.5">
+                <div class="font-extrabold text-slate-700">Danh sách tài khoản đã đăng ký (${employees.length})</div>
                 ${employees.map(emp => `
-                    <div class="p-3.5 rounded-2xl border border-slate-200 bg-slate-50/60 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                        <div class="space-y-1.5 flex-1">
-                            <div class="grid grid-cols-1 sm:grid-cols-4 gap-2">
-                                <input type="text" id="edit-emp-name-${emp.id}" value="${emp.name}" class="px-2.5 py-1.5 rounded-lg border border-slate-300 bg-white font-bold text-slate-800">
-                                <input type="text" id="edit-emp-pass-${emp.id}" value="${emp.password || ''}" placeholder="Mật khẩu" class="px-2.5 py-1.5 rounded-lg border border-slate-300 bg-white text-slate-700">
-                                <select id="edit-emp-role-${emp.id}" class="px-2.5 py-1.5 rounded-lg border border-slate-300 bg-white font-semibold">
-                                    <option value="Quản trị viên" ${emp.role==='Quản trị viên'?'selected':''}>Quản trị viên</option>
-                                    <option value="Thành viên" ${emp.role==='Thành viên'?'selected':''}>Thành viên</option>
+                    <div class="p-3.5 rounded-2xl border border-slate-200 bg-slate-50/60 space-y-2.5">
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                            <div>
+                                <label class="block text-[11px] font-bold text-slate-500 mb-0.5">Họ tên (@${emp.username})</label>
+                                <input type="text" id="acc-name-${emp.id}" value="${emp.name}" class="w-full px-3 py-1.5 rounded-xl border border-slate-200 bg-white font-bold">
+                            </div>
+                            <div>
+                                <label class="block text-[11px] font-bold text-slate-500 mb-0.5">Mật khẩu</label>
+                                <input type="text" id="acc-pass-${emp.id}" value="${emp.password || '123'}" class="w-full px-3 py-1.5 rounded-xl border border-slate-200 bg-white">
+                            </div>
+                            <div>
+                                <label class="block text-[11px] font-bold text-slate-500 mb-0.5">Vai trò</label>
+                                <select id="acc-role-${emp.id}" class="w-full px-3 py-1.5 rounded-xl border border-slate-200 bg-white font-semibold">
+                                    <option value="Quản trị viên" ${emp.role === 'Quản trị viên' ? 'selected' : ''}>Quản trị viên</option>
+                                    <option value="Thành viên" ${emp.role === 'Thành viên' ? 'selected' : ''}>Thành viên</option>
                                 </select>
-                                <input type="text" id="edit-emp-phone-${emp.id}" value="${emp.phone || ''}" placeholder="Số điện thoại" class="px-2.5 py-1.5 rounded-lg border border-slate-300 bg-white">
+                            </div>
+                            <div>
+                                <label class="block text-[11px] font-bold text-slate-500 mb-0.5">Khu vực & SĐT</label>
+                                <div class="flex gap-1.5">
+                                    <select id="acc-region-${emp.id}" class="w-1/2 px-2 py-1.5 rounded-xl border border-slate-200 bg-white">
+                                        <option value="Miền Bắc" ${emp.region === 'Miền Bắc' ? 'selected' : ''}>Miền Bắc</option>
+                                        <option value="Miền Trung" ${emp.region === 'Miền Trung' ? 'selected' : ''}>Miền Trung</option>
+                                        <option value="Miền Nam" ${emp.region === 'Miền Nam' ? 'selected' : ''}>Miền Nam</option>
+                                    </select>
+                                    <input type="text" id="acc-phone-${emp.id}" value="${emp.phone || ''}" placeholder="SĐT" class="w-1/2 px-2.5 py-1.5 rounded-xl border border-slate-200 bg-white">
+                                </div>
                             </div>
                         </div>
-
-                        <div class="flex items-center gap-2 shrink-0">
-                            <button onclick="saveEmployeeEdit('${emp.id}')" class="px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold">Lưu</button>
-                            <button onclick="deleteEmployeeAccount('${emp.id}')" class="px-3 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-700 text-white font-bold">🗑️ Xóa</button>
+                        <div class="flex items-center justify-end gap-2 pt-1">
+                            <button type="button" onclick="adminSaveAccount('${emp.id}')" class="px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold">Lưu sửa</button>
+                            ${currentUser && currentUser.id === emp.id
+                                ? `<span class="text-[11px] text-slate-400 italic px-2">Đang đăng nhập</span>`
+                                : `<button type="button" onclick="adminDeleteAccount('${emp.id}')" class="px-3 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold">🗑️ Xóa tài khoản</button>`
+                            }
                         </div>
                     </div>
                 `).join('')}
             </div>
+
+            <div class="pt-2 border-t border-slate-100 flex justify-end">
+                <button type="button" onclick="closeModal()" class="px-4 py-2 rounded-xl bg-slate-100 text-slate-700 font-bold">Đóng</button>
+            </div>
         </div>
     `);
-}
-
-function saveEmployeeEdit(empId) {
-    if (!requireAdmin()) return;
-    const emp = employees.find(e => e.id === empId);
-    if (!emp) return;
-
-    const nameEl = document.getElementById(`edit-emp-name-${empId}`);
-    const passEl = document.getElementById(`edit-emp-pass-${empId}`);
-    const roleEl = document.getElementById(`edit-emp-role-${empId}`);
-    const phoneEl = document.getElementById(`edit-emp-phone-${empId}`);
-
-    if (nameEl && nameEl.value.trim()) emp.name = nameEl.value.trim();
-    if (passEl) emp.password = passEl.value.trim();
-    if (roleEl) emp.role = roleEl.value;
-    if (phoneEl) emp.phone = phoneEl.value.trim();
-
-    if (currentUser && currentUser.id === empId) {
-        currentUser = { ...emp };
-        updateHeaderUserUI();
-    }
-
-    saveState();
-    showToast(`Đã lưu cập nhật tài khoản ${emp.name}!`, 'success');
-    if (currentPage === 'employees') navigate('employees');
 }
 
 function adminAddAccount(e) {
     e.preventDefault();
     if (!requireAdmin()) return;
 
-    const name = document.getElementById('admin-add-name').value.trim();
-    const username = document.getElementById('admin-add-username').value.trim().toLowerCase();
-    const password = document.getElementById('admin-add-password').value.trim();
-    const role = document.getElementById('admin-add-role').value;
-    const region = document.getElementById('admin-add-region').value;
-    const phone = document.getElementById('admin-add-phone').value.trim();
-    const today = new Date().toISOString().split('T')[0];
+    const name = document.getElementById('adm-new-name').value.trim();
+    const username = document.getElementById('adm-new-username').value.trim().toLowerCase();
+    const password = document.getElementById('adm-new-password').value;
+    const role = document.getElementById('adm-new-role').value;
+    const region = document.getElementById('adm-new-region').value;
+    const phone = document.getElementById('adm-new-phone').value.trim();
 
-    const newEmp = {
-        id: 'TV' + String(employees.length + 1).padStart(3, '0'),
+    if (employees.some(emp => emp.username.toLowerCase() === username)) {
+        showToast('Tên đăng nhập đã tồn tại!', 'error');
+        return;
+    }
+
+    employees.push({
+        id: 'TV-' + Date.now(),
         name,
         username,
         password,
         role,
-        phone,
         region,
-        status: 'Đang hoạt động',
-        registeredAt: today
-    };
+        phone,
+        registeredAt: new Date().toISOString().split('T')[0]
+    });
 
-    employees.push(newEmp);
-    saveState();
-    showToast(`Đã thêm tài khoản ${name} (${role})!`, 'success');
+    saveData();
+    showToast(`Đã tạo tài khoản ${name}`);
     openManageAccountsModal();
     if (currentPage === 'employees') navigate('employees');
 }
 
-function deleteEmployeeAccount(empId) {
+function adminSaveAccount(id) {
     if (!requireAdmin()) return;
-    if (employees.length <= 1) {
-        showToast('Không thể xóa tài khoản cuối cùng trên hệ thống!', 'error');
-        return;
+    const emp = employees.find(e => e.id === id);
+    if (!emp) return;
+
+    emp.name = document.getElementById(`acc-name-${id}`).value.trim() || emp.name;
+    emp.password = document.getElementById(`acc-pass-${id}`).value || emp.password;
+    emp.role = document.getElementById(`acc-role-${id}`).value;
+    emp.region = document.getElementById(`acc-region-${id}`).value;
+    emp.phone = document.getElementById(`acc-phone-${id}`).value.trim();
+
+    if (currentUser && currentUser.id === emp.id) {
+        currentUser = { ...emp };
+        updateHeaderUI();
     }
-    if (currentUser && currentUser.id === empId) {
+
+    saveData();
+    showToast(`Đã cập nhật tài khoản ${emp.name}`);
+    if (currentPage === 'employees') navigate('employees');
+}
+
+function adminDeleteAccount(id) {
+    if (!requireAdmin()) return;
+    if (currentUser && currentUser.id === id) {
         showToast('Không thể tự xóa tài khoản đang đăng nhập!', 'error');
         return;
     }
-    employees = employees.filter(e => e.id !== empId);
-    saveState();
-    showToast('Đã xóa tài khoản thành công!', 'info');
+    employees = employees.filter(e => e.id !== id);
+    saveData();
+    showToast('Đã xóa tài khoản thành viên', 'info');
     openManageAccountsModal();
     if (currentPage === 'employees') navigate('employees');
 }
@@ -1065,23 +1227,18 @@ function deleteEmployeeAccount(empId) {
 function renderReports() {
     const totalCost = computers.reduce((sum, c) => sum + (Number(c.cost) || 0), 0);
     return `
-        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div>
-                <h2 class="text-xl font-extrabold text-slate-800">Báo cáo Thống kê & Chi phí</h2>
-                <p class="text-xs text-slate-500 mt-0.5">Phân tích tỷ trọng trạng thái xử lý và phân bổ thiết bị theo 3 miền</p>
-            </div>
-            <div class="px-4 py-2.5 rounded-2xl bg-blue-50 text-blue-800 text-xs font-extrabold">
-                Tổng chi phí dự kiến: ${formatMoney(totalCost)}
-            </div>
+        <div>
+            <h2 class="text-xl font-extrabold text-slate-800">Báo cáo & Thống kê Kỹ thuật</h2>
+            <p class="text-xs text-slate-500 mt-0.5">Phân tích phân bổ thiết bị theo trạng thái và chi nhánh 3 miền (Tổng chi phí dự kiến: <strong class="text-slate-800">${formatMoney(totalCost)}</strong>)</p>
         </div>
 
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
             <div class="card-elevated p-5 rounded-3xl">
-                <h3 class="font-extrabold text-slate-800 text-sm mb-4">Thống kê theo Trạng thái Xử lý</h3>
+                <h3 class="font-extrabold text-slate-800 text-sm mb-4">Tỷ lệ thiết bị theo Trạng thái</h3>
                 <div class="h-64"><canvas id="chart-status"></canvas></div>
             </div>
             <div class="card-elevated p-5 rounded-3xl">
-                <h3 class="font-extrabold text-slate-800 text-sm mb-4">Phân bổ Thiết bị theo 3 Miền</h3>
+                <h3 class="font-extrabold text-slate-800 text-sm mb-4">Số lượng thiết bị theo 3 Miền</h3>
                 <div class="h-64"><canvas id="chart-region"></canvas></div>
             </div>
         </div>
@@ -1089,25 +1246,24 @@ function renderReports() {
 }
 
 function initReportCharts() {
-    if (typeof Chart === 'undefined') return;
     const statusCtx = document.getElementById('chart-status');
     const regionCtx = document.getElementById('chart-region');
 
-    if (statusCtx) {
+    if (statusCtx && typeof Chart !== 'undefined') {
         activeCharts.push(new Chart(statusCtx, {
             type: 'doughnut',
             data: {
                 labels: MANAGED_STATUSES,
                 datasets: [{
                     data: MANAGED_STATUSES.map(st => computers.filter(c => c.status === st).length),
-                    backgroundColor: ['#f59e0b', '#10b981', '#3b82f6', '#8b5cf6', '#64748b']
+                    backgroundColor: ['#f97316', '#f59e0b', '#10b981', '#3b82f6', '#8b5cf6', '#64748b']
                 }]
             },
             options: { responsive: true, maintainAspectRatio: false }
         }));
     }
 
-    if (regionCtx) {
+    if (regionCtx && typeof Chart !== 'undefined') {
         const regs = ['Miền Bắc', 'Miền Trung', 'Miền Nam'];
         activeCharts.push(new Chart(regionCtx, {
             type: 'bar',
@@ -1120,17 +1276,13 @@ function initReportCharts() {
                     borderRadius: 8
                 }]
             },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
-            }
+            options: { responsive: true, maintainAspectRatio: false }
         }));
     }
 }
 
 // ============================================================================
-// 12. CÀI ĐẶT HỆ THỐNG (CHỈ DÀNH CHO QUẢN TRỊ VIÊN)
+// 12. CÀI ĐẶT HỆ THỐNG (CHỈ QUẢN TRỊ VIÊN)
 // ============================================================================
 function renderSettings() {
     if (!isAdmin()) return '';
@@ -1145,7 +1297,7 @@ function renderSettings() {
                 <div class="font-extrabold text-slate-800 text-sm">Đặt lại dữ liệu thiết bị</div>
                 <div class="text-xs text-slate-500 mt-0.5">Xóa toàn bộ danh sách máy lỗi đã nhập (chỉ áp dụng cho Quản trị viên)</div>
             </div>
-            <button onclick="resetAllData()" class="px-4 py-2.5 rounded-2xl bg-rose-600 hover:bg-rose-700 text-white font-extrabold text-xs shadow-xs self-start sm:self-auto">
+            <button onclick="resetAllData()" class="px-4 py-2.5 rounded-2xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-extrabold self-start sm:self-auto">
                 🗑️ Xóa toàn bộ dữ liệu máy
             </button>
         </div>
@@ -1156,8 +1308,8 @@ function resetAllData() {
     if (!requireAdmin()) return;
     computers = [];
     repairs = [];
-    saveState();
-    showToast('Đã xóa toàn bộ dữ liệu máy tính trên hệ thống!', 'warning');
+    saveData();
+    showToast('Đã xóa toàn bộ dữ liệu thiết bị');
     navigate('dashboard');
 }
 
@@ -1165,75 +1317,76 @@ function resetAllData() {
 // 13. ĐĂNG NHẬP & ĐĂNG KÝ TÀI KHOẢN
 // ============================================================================
 function openAuthModal(tab = 'login') {
-    openModal('🔐 Đăng nhập / Đăng ký Tài khoản', `
+    const isLogin = tab === 'login';
+    openModal(isLogin ? '🔐 Đăng nhập Hệ thống' : '📝 Đăng ký Tài khoản Mới', `
         <div class="space-y-4 text-xs">
-            <div class="grid grid-cols-2 gap-2 p-1 rounded-2xl bg-slate-100">
-                <button onclick="openAuthModal('login')" class="py-2 rounded-xl font-extrabold transition-all ${tab==='login' ? 'bg-white text-blue-600 shadow-xs' : 'text-slate-600'}">
-                    Đăng nhập
-                </button>
-                <button onclick="openAuthModal('register')" class="py-2 rounded-xl font-extrabold transition-all ${tab==='register' ? 'bg-white text-blue-600 shadow-xs' : 'text-slate-600'}">
-                    Đăng ký mới
-                </button>
+            <div class="flex gap-2 p-1 bg-slate-100 rounded-2xl">
+                <button type="button" onclick="openAuthModal('login')" class="flex-1 py-2 rounded-xl font-extrabold transition-all ${isLogin ? 'bg-white text-blue-600 shadow-xs' : 'text-slate-500'}">Đăng nhập</button>
+                <button type="button" onclick="openAuthModal('register')" class="flex-1 py-2 rounded-xl font-extrabold transition-all ${!isLogin ? 'bg-white text-blue-600 shadow-xs' : 'text-slate-500'}">Đăng ký</button>
             </div>
 
-            ${tab === 'login' ? `
-                <form onsubmit="submitAuthLogin(event)" class="space-y-4">
+            ${isLogin ? `
+                <form onsubmit="submitAuthLogin(event)" class="space-y-3.5">
                     <div>
-                        <label class="block font-bold text-slate-700 mb-1">Chọn tài khoản đã đăng ký</label>
-                        <select id="login-account-id" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500 font-semibold">
-                            ${employees.map(emp => `
-                                <option value="${emp.id}">${emp.name} (${emp.role})</option>
-                            `).join('')}
+                        <label class="block font-bold text-slate-700 mb-1">Chọn tài khoản hoặc nhập tên đăng nhập</label>
+                        <select id="login-select" onchange="document.getElementById('login-username').value=this.value" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white font-semibold mb-2">
+                            <option value="">-- Chọn nhanh tài khoản có sẵn --</option>
+                            ${employees.map(emp => `<option value="${emp.username}">${emp.name} (${emp.role})</option>`).join('')}
                         </select>
+                        <input type="text" id="login-username" required placeholder="Tên đăng nhập (VD: bacit)..." class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200">
                     </div>
                     <div>
                         <label class="block font-bold text-slate-700 mb-1">Mật khẩu *</label>
-                        <input type="password" id="login-account-password" required placeholder="Nhập mật khẩu (mặc định: 123)..." class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-blue-500">
+                        <input type="password" id="login-password" required placeholder="Nhập mật khẩu (mặc định: 123)..." class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200">
                     </div>
-                    <button type="submit" class="w-full py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-extrabold shadow-xs">
-                        Đăng nhập vào hệ thống
-                    </button>
+                    <div class="pt-2 flex justify-end gap-2">
+                        <button type="button" onclick="closeModal()" class="px-4 py-2.5 rounded-xl bg-slate-100 text-slate-700 font-bold">Đóng</button>
+                        <button type="submit" class="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-extrabold">Đăng nhập</button>
+                    </div>
                 </form>
             ` : `
                 <form onsubmit="submitAuthRegister(event)" class="space-y-3.5">
-                    <div>
-                        <label class="block font-bold text-slate-700 mb-1">Họ và tên hiển thị *</label>
-                        <input type="text" id="reg-name" required placeholder="VD: Nguyễn Văn A" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-blue-500">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                            <label class="block font-bold text-slate-700 mb-1">Họ và tên *</label>
+                            <input type="text" id="reg-name" required placeholder="Nguyễn Văn A" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200">
+                        </div>
+                        <div>
+                            <label class="block font-bold text-slate-700 mb-1">Tên đăng nhập *</label>
+                            <input type="text" id="reg-username" required placeholder="nguyenvana" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200">
+                        </div>
                     </div>
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <div>
-                            <label class="block font-bold text-slate-700 mb-1">Tên đăng nhập *</label>
-                            <input type="text" id="reg-username" required placeholder="VD: nguyenvana" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-blue-500">
-                        </div>
-                        <div>
                             <label class="block font-bold text-slate-700 mb-1">Mật khẩu *</label>
-                            <input type="password" id="reg-password" required placeholder="Nhập mật khẩu..." class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-blue-500">
-                        </div>
-                    </div>
-                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                        <div>
-                            <label class="block font-bold text-slate-700 mb-1">Số điện thoại</label>
-                            <input type="text" id="reg-phone" placeholder="09xxxxxxxx" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-blue-500">
+                            <input type="password" id="reg-password" required placeholder="Nhập mật khẩu..." class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200">
                         </div>
                         <div>
-                            <label class="block font-bold text-slate-700 mb-1">Vai trò tài khoản</label>
-                            <select id="reg-role" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500">
-                                <option value="Thành viên">Thành viên (Chỉ xem số liệu)</option>
-                                <option value="Quản trị viên">Quản trị viên (Toàn quyền)</option>
+                            <label class="block font-bold text-slate-700 mb-1">Vai trò</label>
+                            <select id="reg-role" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white font-semibold">
+                                <option value="Thành viên">Thành viên (Chỉ xem)</option>
+                                <option value="Quản trị viên">Quản trị viên</option>
                             </select>
                         </div>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <div>
-                            <label class="block font-bold text-slate-700 mb-1">Khu vực làm việc</label>
-                            <select id="reg-region" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500">
+                            <label class="block font-bold text-slate-700 mb-1">Khu vực</label>
+                            <select id="reg-region" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white font-semibold">
                                 <option value="Miền Bắc">Miền Bắc</option>
                                 <option value="Miền Trung">Miền Trung</option>
                                 <option value="Miền Nam">Miền Nam</option>
                             </select>
                         </div>
+                        <div>
+                            <label class="block font-bold text-slate-700 mb-1">Số điện thoại</label>
+                            <input type="text" id="reg-phone" placeholder="09xxxxxxxx" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200">
+                        </div>
                     </div>
-                    <button type="submit" class="w-full py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-extrabold shadow-xs">
-                        Hoàn tất đăng ký tài khoản
-                    </button>
+                    <div class="pt-2 flex justify-end gap-2">
+                        <button type="button" onclick="closeModal()" class="px-4 py-2.5 rounded-xl bg-slate-100 text-slate-700 font-bold">Đóng</button>
+                        <button type="submit" class="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold">Hoàn tất Đăng ký</button>
+                    </div>
                 </form>
             `}
         </div>
@@ -1242,22 +1395,20 @@ function openAuthModal(tab = 'login') {
 
 function submitAuthLogin(e) {
     e.preventDefault();
-    const accId = document.getElementById('login-account-id').value;
-    const passInput = document.getElementById('login-account-password').value.trim();
-    const found = employees.find(emp => emp.id === accId);
-    if (!found) return;
+    const username = document.getElementById('login-username').value.trim().toLowerCase();
+    const password = document.getElementById('login-password').value;
 
-    const expectedPass = found.password || '123';
-    if (passInput !== expectedPass) {
-        showToast('Mật khẩu không chính xác, vui lòng thử lại!', 'error');
+    const found = employees.find(emp => emp.username.toLowerCase() === username && (emp.password || '123') === password);
+    if (!found) {
+        showToast('Sai tên đăng nhập hoặc mật khẩu!', 'error');
         return;
     }
 
     currentUser = { ...found };
-    saveState();
-    updateHeaderUserUI();
-    showToast(`Xin chào ${currentUser.name} (${currentUser.role})!`, 'success');
+    saveData();
+    updateHeaderUI();
     closeModal();
+    showToast(`Xin chào ${currentUser.name} (${currentUser.role})`);
     navigate(currentPage);
 }
 
@@ -1265,47 +1416,50 @@ function submitAuthRegister(e) {
     e.preventDefault();
     const name = document.getElementById('reg-name').value.trim();
     const username = document.getElementById('reg-username').value.trim().toLowerCase();
-    const password = document.getElementById('reg-password').value.trim();
-    const phone = document.getElementById('reg-phone').value.trim();
+    const password = document.getElementById('reg-password').value;
     const role = document.getElementById('reg-role').value;
     const region = document.getElementById('reg-region').value;
-    const today = new Date().toISOString().split('T')[0];
+    const phone = document.getElementById('reg-phone').value.trim();
+
+    if (employees.some(emp => emp.username.toLowerCase() === username)) {
+        showToast('Tên đăng nhập đã được sử dụng!', 'error');
+        return;
+    }
 
     const newEmp = {
-        id: 'TV' + String(employees.length + 1).padStart(3, '0'),
+        id: 'TV-' + Date.now(),
         name,
         username,
         password,
         role,
-        phone,
         region,
-        status: 'Đang hoạt động',
-        registeredAt: today
+        phone,
+        registeredAt: new Date().toISOString().split('T')[0]
     };
 
     employees.push(newEmp);
     currentUser = { ...newEmp };
-    saveState();
-    updateHeaderUserUI();
-    showToast(`Đăng ký thành công tài khoản ${name} (${role})!`, 'success');
+    saveData();
+    updateHeaderUI();
     closeModal();
+    showToast(`Đăng ký thành công! Đã đăng nhập với quyền ${role}`);
     navigate(currentPage);
 }
 
 function logoutUser() {
     currentUser = null;
-    saveState();
-    updateHeaderUserUI();
-    showToast('Đã đăng xuất khỏi hệ thống.', 'info');
-    navigate(currentPage);
+    saveData();
+    updateHeaderUI();
+    showToast('Đã đăng xuất khỏi tài khoản', 'info');
+    navigate('dashboard');
 }
 
 // ============================================================================
-// 14. KHỞI CHẠY ỨNG DỤNG
+// 14. KHỞI TẠO ỨNG DỤNG
 // ============================================================================
 window.addEventListener('DOMContentLoaded', () => {
-    loadState();
-    updateHeaderUserUI();
+    loadData();
+    updateHeaderUI();
     navigate('dashboard');
 });
 </script>
